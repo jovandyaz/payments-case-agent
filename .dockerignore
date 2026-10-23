@@ -1,0 +1,12 @@
+**/node_modules
+**/dist
+**/coverage
+.git
+.superpowers
+.claude
+docs
+specs
+**/.env*
+*.log
+**/*.spec.ts
+**/*.spec.tsx

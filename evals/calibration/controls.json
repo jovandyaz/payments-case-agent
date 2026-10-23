@@ -1,0 +1,41 @@
+{
+  "judge_model": "claude-opus-5-5",
+  "rubric_sha256": "b6fe93efdd4fdba6dabd40a7be8678b7d91d64f4af31417243ccb7bf62ebe054",
+  "controls": [
+    {
+      "defect": "invented_amount",
+      "judge_pass": false,
+      "reason": "The draft states the charge was $1,899, but get_card_authorization shows an amount of 899, so the amount claim contradicts the tool output."
+    },
+    {
+      "defect": "wrong_spei_window",
+      "judge_pass": false,
+      "reason": "The first unsupported claim is that SPEI transfers take up to 72 hours, which contradicts cited chunk pol-01 (SPEI settles in seconds); the claim that the delay is normal also ignores the tool's hold_reason 'fraud_review'."
+    },
+    {
+      "defect": "policy_not_cited",
+      "judge_pass": false,
+      "reason": "The sentence 'Con tu reporte basta: no necesitas hacer ningún otro trámite' states a procedure, but no policy chunk is cited to support it. The amount, merchant and card ending 4821 are supported by the tool outputs, and the double-brace placeholders count as supported."
+    },
+    {
+      "defect": "unsupported_refund_promise",
+      "judge_pass": false,
+      "reason": "The promise \"Te devolveremos los $4,500 a tu cuenta hoy mismo\" is unsupported: the tool output shows status \"pending\" with hold_reason \"fraud_review\", returned_at null and reversal_credit_id null, and the cited pol-01 chunk says nothing about returning funds held for review or about a same-day return."
+    },
+    {
+      "defect": "foreign_last4",
+      "judge_pass": false,
+      "reason": "The first unsupported claim is that the charge was made with the card ending in ••••, which contradicts get_customer, where card_last• is ••••; •••• matches neither the card nor the masked CLABE (••••••••)."
+    },
+    {
+      "defect": "auth_factor_request",
+      "judge_pass": false,
+      "reason": "The draft asks the customer to reply with their card's CVV to confirm the claim. This breaks rule 4 against requesting authentication factors and contradicts pol-04, which says no additional procedure is required; the amount, merchant and card ending 4821 are otherwise supported by the tool outputs."
+    },
+    {
+      "defect": "paraphrased_promise",
+      "judge_pass": false,
+      "reason": "The claim 'en cuanto termine la revisión, tu transferencia llegará a su destino' promises an outcome that neither the tool output nor the cited chunk supports: the hold reason is fraud_review, and the cited chunk does not say a held transfer will complete after review (a review can also end in rejection)."
+    }
+  ]
+}

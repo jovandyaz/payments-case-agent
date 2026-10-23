@@ -1,0 +1,25 @@
+{
+  "mcpServers": {
+    "postgres-local": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["--python", "3.12", "postgres-mcp", "--access-mode=restricted"],
+      "env": {
+        "DATABASE_URI": "${DATABASE_URL:-postgresql://payments:payments@localhost:5433/payments}"
+      }
+    },
+    "context7": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp@4.1.1"],
+      "env": {
+        "CONTEXT7_API_KEY": "${CONTEXT7_API_KEY:-}"
+      }
+    },
+    "playwright": {
+      "type": "stdio",
+      "command": "pnpm",
+      "args": ["dlx", "@playwright/mcp@0.0.81"]
+    }
+  }
+}

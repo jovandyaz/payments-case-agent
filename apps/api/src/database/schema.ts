@@ -1,0 +1,302 @@
+import {
+  ACTION_STATUSES,
+  ACTION_TYPES,
+  CASE_CATEGORIES,
+  CASE_FLAGS,
+  CASE_SOURCES,
+  CASE_STATUSES,
+  type ActionParams,
+  type CaseFlag,
+  EXECUTION_STATUSES,
+  REJECT_CODES,
+  REVIEW_TIERS,
+  RUN_STATUSES,
+  SECURITY_EVENT_KINDS,
+  STEP_KINDS,
+  STOP_REASONS,
+} from '@payments-case-agent/contracts';
+import { sql, type SQL } from 'drizzle-orm';
+import {
+  boolean,
+  check,
+  customType,
+  index,
+  integer,
+  jsonb,
+  numeric,
+  pgEnum,
+  pgTable,
+  primaryKey,
+  real,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+  type PgColumn,
+} from 'drizzle-orm/pg-core';
+
+import { CANARY_DEFECTS, type CanaryDefect } from '../canaries/templates.js';
+import { CASE_CLOCKS, type CaseClockMode } from '../config.js';
+
+/** The full-text configuration of migration 0000: Spanish stems over unaccented words. */
+export const SEARCH_CONFIG = sql.raw(`'es_unaccent'`);
+const CASE_FLAGS_JSON = sql.raw(`'${JSON.stringify(CASE_FLAGS)}'::jsonb`);
+const USD_PRECISION = 12;
+const USD_SCALE = 6;
+
+const tsvector = customType<{ data: string }>({
+  dataType: () => 'tsvector',
+});
+
+const timestamptz = (name: string) => timestamp(name, { withTimezone: true });
+
+// A NULL column passes a CHECK, so the same rule serves the nullable acknowledgment.
+const closedFlagSet = (column: PgColumn): SQL =>
+  sql`jsonb_typeof(${column}) = 'array' AND ${column} <@ ${CASE_FLAGS_JSON}`;
+const usd = (name: string) =>
+  numeric(name, { precision: USD_PRECISION, scale: USD_SCALE });
+const caseIdRef = () =>
+  text('case_id')
+    .notNull()
+    .references(() => cases.id);
+const runIdRef = () => text('run_id').references(() => agentRuns.id);
+const SEARCH_WEIGHT = { heading: 'A', keywords: 'B', body: 'D' } as const;
+
+const weighted = (
+  column: PgColumn,
+  weight: (typeof SEARCH_WEIGHT)[keyof typeof SEARCH_WEIGHT],
+): SQL =>
+  sql`setweight(to_tsvector(${SEARCH_CONFIG}, ${column}), ${sql.raw(`'${weight}'`)})`;
+
+export const caseStatus = pgEnum('case_status', CASE_STATUSES);
+export const caseSource = pgEnum('case_source', CASE_SOURCES);
+export const caseCategory = pgEnum('case_category', CASE_CATEGORIES);
+export const reviewTier = pgEnum('review_tier', REVIEW_TIERS);
+export const runStatus = pgEnum('run_status', RUN_STATUSES);
+export const stopReason = pgEnum('stop_reason', STOP_REASONS);
+export const stepKind = pgEnum('step_kind', STEP_KINDS);
+export const actionType = pgEnum('action_type', ACTION_TYPES);
+export const actionStatus = pgEnum('action_status', ACTION_STATUSES);
+export const executionStatus = pgEnum('execution_status', EXECUTION_STATUSES);
+export const rejectCode = pgEnum('reject_code', REJECT_CODES);
+export const securityEventKind = pgEnum(
+  'security_event_kind',
+  SECURITY_EVENT_KINDS,
+);
+
+export const cases = pgTable(
+  'cases',
+  {
+    id: text().primaryKey(),
+    ticketId: text('ticket_id').notNull().unique(),
+    folio: text().notNull().unique(),
+    receivedAt: timestamptz('received_at').notNull(),
+    source: caseSource().notNull(),
+    customerId: text('customer_id').notNull(),
+    textMasked: text('text_masked').notNull(),
+    textRedacted: text('text_redacted'),
+    status: caseStatus().notNull().default('queued'),
+    attempts: integer().notNull().default(0),
+    manualReruns: integer('manual_reruns').notNull().default(0),
+    lockedUntil: timestamptz('locked_until'),
+    claimToken: uuid('claim_token'),
+    nextAttemptAt: timestamptz('next_attempt_at').notNull().defaultNow(),
+    category: caseCategory(),
+    flags: jsonb().$type<CaseFlag[]>().notNull().default([]),
+    reviewTier: reviewTier('review_tier'),
+  },
+  (t) => [
+    index('cases_claimable').on(t.status, t.nextAttemptAt),
+    check('cases_flags_closed_set', closedFlagSet(t.flags)),
+    // An investigating case with no lease could never be reclaimed.
+    check(
+      'cases_investigating_claimed',
+      sql`${t.status} <> 'investigating' or (${t.claimToken} is not null and ${t.lockedUntil} is not null)`,
+    ),
+  ],
+);
+
+export const webhookEvents = pgTable('webhook_events', {
+  eventId: text('event_id').primaryKey(),
+  payloadHash: text('payload_hash').notNull(),
+  caseId: caseIdRef(),
+  receivedAt: timestamptz('received_at').notNull().defaultNow(),
+});
+
+export const agentRuns = pgTable('agent_runs', {
+  id: text().primaryKey(),
+  caseId: caseIdRef(),
+  variant: text().notNull(),
+  model: text().notNull(),
+  promptVersion: text('prompt_version').notNull(),
+  status: runStatus().notNull().default('running'),
+  stopReason: stopReason('stop_reason'),
+  inputTokens: integer('input_tokens').notNull().default(0),
+  outputTokens: integer('output_tokens').notNull().default(0),
+  cachedInputTokens: integer('cached_input_tokens').notNull().default(0),
+  costUsd: usd('cost_usd').notNull().default('0'),
+  latencyMs: integer('latency_ms'),
+  errorCode: text('error_code'),
+  startedAt: timestamptz('started_at').notNull().defaultNow(),
+  finishedAt: timestamptz('finished_at'),
+});
+
+export const runSteps = pgTable(
+  'run_steps',
+  {
+    runId: runIdRef().notNull(),
+    idx: integer().notNull(),
+    kind: stepKind().notNull(),
+    name: text().notNull(),
+    inputMasked: jsonb('input_masked'),
+    outputMasked: jsonb('output_masked'),
+    inputTokens: integer('input_tokens'),
+    outputTokens: integer('output_tokens'),
+    cachedInputTokens: integer('cached_input_tokens'),
+    costUsd: usd('cost_usd'),
+    latencyMs: integer('latency_ms'),
+    providerRequestId: text('provider_request_id'),
+    finishReason: text('finish_reason'),
+  },
+  (t) => [primaryKey({ columns: [t.runId, t.idx] })],
+);
+
+export const resolutions = pgTable('resolutions', {
+  runId: runIdRef().primaryKey(),
+  category: caseCategory().notNull(),
+  draftReply: text('draft_reply').notNull(),
+  citations: jsonb().notNull(),
+  abstained: boolean().notNull(),
+  reasoningSummary: text('reasoning_summary').notNull(),
+});
+
+export const proposedActions = pgTable(
+  'proposed_actions',
+  {
+    id: text().primaryKey(),
+    caseId: caseIdRef(),
+    runId: runIdRef(),
+    agentType: actionType('agent_type').notNull(),
+    agentParams: jsonb('agent_params').$type<ActionParams>().notNull(),
+    type: actionType().notNull(),
+    params: jsonb().$type<ActionParams>().notNull(),
+    justification: text().notNull(),
+    status: actionStatus().notNull().default('proposed'),
+    proposedAt: timestamptz('proposed_at').notNull().defaultNow(),
+    decidedBy: text('decided_by'),
+    decidedAt: timestamptz('decided_at'),
+    finalReply: text('final_reply'),
+    rejectCode: rejectCode('reject_code'),
+    rejectReason: text('reject_reason'),
+    replyEditRatio: real('reply_edit_ratio'),
+    acknowledgedFlags: jsonb('acknowledged_flags').$type<CaseFlag[]>(),
+    reviewedTransactionIds: jsonb('reviewed_transaction_ids').$type<string[]>(),
+    operatorOverride: boolean('operator_override').notNull().default(false),
+    isCanary: boolean('is_canary').notNull().default(false),
+  },
+  (t) => [
+    uniqueIndex('one_open_proposal_per_case')
+      .on(t.caseId)
+      .where(sql`${t.status} = 'proposed'`),
+    check(
+      'proposed_actions_acknowledged_flags_closed_set',
+      closedFlagSet(t.acknowledgedFlags),
+    ),
+  ],
+);
+
+export const actionExecutions = pgTable('action_executions', {
+  actionId: text('action_id')
+    .primaryKey()
+    .references(() => proposedActions.id),
+  status: executionStatus().notNull(),
+  attempts: integer().notNull().default(1),
+  startedAt: timestamptz('started_at').notNull().defaultNow(),
+  lastAttemptAt: timestamptz('last_attempt_at'),
+  finishedAt: timestamptz('finished_at'),
+  result: jsonb(),
+});
+
+export const auditLog = pgTable('audit_log', {
+  id: uuid().primaryKey().defaultRandom(),
+  at: timestamptz('at').notNull().defaultNow(),
+  actor: text().notNull(),
+  event: text().notNull(),
+  ref: text().notNull(),
+  detailMasked: jsonb('detail_masked').notNull().default({}),
+  keyId: text('key_id'),
+  ip: text(),
+  userAgent: text('user_agent'),
+});
+
+// Only the injector writes a marker, with its case; the worker reads it to run
+// that case scripted, so a canary's text never reaches the provider (02 G3).
+export const canaryCases = pgTable(
+  'canary_cases',
+  {
+    caseId: text('case_id')
+      .primaryKey()
+      .references(() => cases.id),
+    defect: text().$type<CanaryDefect>().notNull(),
+  },
+  (t) => [
+    // A defect with no template could not be scripted; DDL takes no bound
+    // values, and the list comes from the constant, never from input.
+    check(
+      'canary_cases_defect_known',
+      sql`${t.defect} in (${sql.raw(CANARY_DEFECTS.map((defect) => `'${defect}'`).join(', '))})`,
+    ),
+  ],
+);
+
+export const securityEvents = pgTable('security_events', {
+  id: uuid().primaryKey().defaultRandom(),
+  at: timestamptz('at').notNull().defaultNow(),
+  kind: securityEventKind().notNull(),
+  caseId: caseIdRef(),
+  runId: runIdRef().notNull(),
+  refMasked: text('ref_masked').notNull(),
+});
+
+export const policyChunks = pgTable(
+  'policy_chunks',
+  {
+    id: text().primaryKey(),
+    docId: text('doc_id').notNull(),
+    section: text().notNull(),
+    content: text().notNull(),
+    keywords: text().notNull().default(''),
+    tsv: tsvector()
+      .notNull()
+      .generatedAlwaysAs(
+        (): SQL =>
+          sql`${weighted(policyChunks.section, SEARCH_WEIGHT.heading)} || ${weighted(policyChunks.keywords, SEARCH_WEIGHT.keywords)} || ${weighted(policyChunks.content, SEARCH_WEIGHT.body)}`,
+      ),
+    stateRules: jsonb('state_rules').notNull().default([]),
+    contentHash: text('content_hash').notNull(),
+    quarantined: boolean().notNull().default(false),
+  },
+  (t) => [index('policy_chunks_tsv').using('gin', t.tsv)],
+);
+
+/**
+ * The clock api receives live cases on, as it last booted (01 §Webhook and
+ * queue, Case clock): one row, so the canary injector stamps its cases on the
+ * same clock and never on its own environment's (02 G3).
+ */
+export const caseClock = pgTable(
+  'case_clock',
+  {
+    id: boolean().primaryKey().default(true),
+    mode: text().$type<CaseClockMode>().notNull(),
+    start: timestamptz('start').notNull(),
+    recordedAt: timestamptz('recorded_at').notNull().defaultNow(),
+  },
+  (t) => [
+    check('case_clock_one_row', sql`${t.id}`),
+    check(
+      'case_clock_mode_known',
+      sql`${t.mode} in (${sql.raw(CASE_CLOCKS.map((mode) => `'${mode}'`).join(', '))})`,
+    ),
+  ],
+);

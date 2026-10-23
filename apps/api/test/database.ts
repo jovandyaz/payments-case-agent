@@ -1,0 +1,55 @@
+import { DB_ROLES, newFolio, type DbRole } from '@payments-case-agent/contracts';
+import { PostgreSqlContainer } from '@testcontainers/postgresql';
+import type { Sql } from 'postgres';
+
+import { migrateDatabase } from '../src/database/migrate.js';
+import { setRolePasswords } from '../src/database/roles.js';
+
+/** The image compose runs (docker-compose.yml `db`). */
+export const POSTGRES_IMAGE = 'postgres:16-alpine';
+/** Upper bound for pulling and starting the container in a test hook. */
+export const CONTAINER_START_MS = 120_000;
+
+export interface TestDatabase {
+  ownerUrl: string;
+  urlFor: (role: DbRole) => string;
+  passwordFor: (role: DbRole) => string;
+  stop: () => Promise<void>;
+}
+
+/** A throwaway Postgres 16 (the compose image), migrated, with every role able to log in. */
+export async function startTestDatabase(): Promise<TestDatabase> {
+  const container = await new PostgreSqlContainer(POSTGRES_IMAGE).start();
+  const ownerUrl = container.getConnectionUri();
+  const passwordFor = (role: DbRole): string => `test-${role}`;
+  await migrateDatabase(ownerUrl);
+  await setRolePasswords(
+    ownerUrl,
+    Object.fromEntries(
+      DB_ROLES.map((role) => [role, passwordFor(role)]),
+    ) as Record<DbRole, string>,
+  );
+  return {
+    ownerUrl,
+    passwordFor,
+    urlFor: (role) => {
+      const url = new URL(ownerUrl);
+      url.username = role;
+      url.password = passwordFor(role);
+      return url.toString();
+    },
+    stop: async () => {
+      await container.stop();
+    },
+  };
+}
+
+export async function insertCase(
+  sql: Sql,
+  id: string,
+  customerId = 'cus_01',
+): Promise<void> {
+  await sql`
+    insert into cases (id, ticket_id, folio, received_at, source, customer_id, text_masked)
+    values (${id}, ${`T-${id}`}, ${newFolio()}, now(), 'webhook', ${customerId}, 'hola')`;
+}

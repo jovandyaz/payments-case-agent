@@ -1,0 +1,79 @@
+import { describe, expect, it } from 'vitest';
+
+import {
+  ALLOWED_REPLY_HOSTS,
+  hasLinkOutsideAllowList,
+} from './link-scanner.js';
+
+const scan = (text: string): boolean =>
+  hasLinkOutsideAllowList(text, ALLOWED_REPLY_HOSTS);
+
+describe('hasLinkOutsideAllowList (02 G5 LINK_IN_REPLY)', () => {
+  it.each([
+    'Hola Ana, registramos tu aclaración con folio AC-7KQ2-M9XD.',
+    'Te responderemos por escrito a más tardar el 9 de octubre.',
+    'Puedes consultar el estado en https://brisa.example/ayuda/aclaraciones.',
+    'Escríbenos desde la app o en www.brisa.example',
+    'Escríbenos a brisa.example/ayuda',
+    'Revisa [nuestra guía](https://ayuda.brisa.example/spei).',
+    'El monto fue de $1,250.50 y la operación quedó liquidada.',
+    'Por ej. una transferencia SPEI tarda segundos; S.A. de C.V.',
+    'Listo. Saludos.',
+    'El cargo es de un comercio de EE.UU. y lo revisamos.',
+    'Lo canalizamos con RR.HH. de la empresa.',
+  ])('passes a reply with no link outside Brisa: %s', (text) => {
+    expect(scan(text)).toBe(false);
+  });
+
+  it.each([
+    ['a markdown link', 'Detalles [aquí](https://evil.example/collect?d=abc)'],
+    ['a markdown image', '![](https://evil.example/?d=AC-7KQ2-M9XD)'],
+    ['a raw url', 'Ve a https://evil.example/collect'],
+    ['an uppercase url', 'HTTPS://EVIL.EXAMPLE/COLLECT'],
+    ['a subdomain smuggling data', 'https://c2VjcmV0.evil.example'],
+    ['a root-dot host', 'https://evil.example./collect'],
+    ['a percent-encoded dot', '[x](https://evil%2eexample/collect)'],
+    ['a decimal character reference', '[x](https://evil&#46;example/collect)'],
+    ['a hex character reference', '[x](https://evil&#x2E;example/collect)'],
+    ['a named character reference', '[x](https://evil&period;example/collect)'],
+    [
+      'a reference-style definition',
+      'ver [x][1]\n\n[1]: //evil.example/collect',
+    ],
+    ['a protocol-relative destination', '[x](//evil.example)'],
+    ['an angle-wrapped destination', '[x](<//evil.example>)'],
+    ['an angle-bracket autolink', '<https://evil.example>'],
+    ['a www autolink', 'Detalles en www.evil.example'],
+    ['an email autolink', 'mándalo a datos@evil.example'],
+    [
+      'a host that only starts with brisa.example',
+      'https://brisa.example.evil.com/ayuda',
+    ],
+    ['a look-alike of brisa.example', 'https://brisa-example.com/ayuda'],
+    [
+      'a host that only ends with brisa.example',
+      'https://evilbrisa.example/ayuda',
+    ],
+    ['a bare domain', 'Entra a evil.ly/premio'],
+    [
+      'a bare host that only starts with brisa.example',
+      'Entra a brisa.example.evil.com/ayuda',
+    ],
+    ['a full-width dot', 'Entra a https://evil\uFF0Eexample'],
+    ['an upper-case bare domain', 'Visita EVIL.COM/x para validar'],
+    ['a capitalized bare domain', 'Visita Evil.com/x'],
+    ['a mixed-case bare domain', 'Valida en SOPORTE-BRISA.COM'],
+    ['an ideographic full stop', 'Entra a evil\u3002com/x'],
+    ['raw html', '<a href="https://brisa.example">ayuda</a>'],
+    ['an html image', '<img src=x onerror=alert(1)>'],
+    ['a javascript url', '[x](javascript:alert(1))'],
+    ['a data url', '[x](data:text/html,hola)'],
+  ])('flags %s', (_, text) => {
+    expect(scan(text)).toBe(true);
+  });
+
+  it('survives out-of-range character references instead of throwing', () => {
+    expect(scan('[a](https://x&#1114112;.example)')).toBe(true);
+    expect(scan('Hola &#x110000; adiós')).toBe(false);
+  });
+});

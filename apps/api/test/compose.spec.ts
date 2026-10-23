@@ -1,0 +1,201 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
+import { describe, expect, it } from 'vitest';
+import { parse } from 'yaml';
+
+import { DATASET_NOW } from '../../../data/scenarios.js';
+
+interface ComposeService {
+  environment?: Record<string, string> | string[];
+  env_file?: unknown;
+  ports?: string[];
+  depends_on?: Record<string, { condition: string }>;
+  networks?: Record<string, { ipv4_address?: string }>;
+}
+
+const compose = parse(
+  readFileSync(
+    resolve(import.meta.dirname, '../../../docker-compose.yml'),
+    'utf8',
+  ),
+) as { services: Record<string, ComposeService> };
+
+const holders = (variable: string): string[] =>
+  Object.entries(compose.services)
+    .filter(([, service]) => Object.hasOwn(service.environment ?? {}, variable))
+    .map(([name]) => name)
+    .sort();
+
+const env = (service: string): Record<string, string> => {
+  const environment = compose.services[service]?.environment ?? {};
+  return Array.isArray(environment) ? {} : environment;
+};
+
+describe('compose process boundary (02 G1)', () => {
+  it('declares every variable in a map, so the checks below see them all', () => {
+    for (const [name, service] of Object.entries(compose.services)) {
+      expect(Array.isArray(service.environment), name).toBe(false);
+      expect(service.env_file, name).toBeUndefined();
+    }
+  });
+
+  it('gives CORE_EXECUTOR_KEY only to the executor and core-mock', () => {
+    expect(holders('CORE_EXECUTOR_KEY').sort()).toEqual([
+      'core-mock',
+      'executor',
+    ]);
+  });
+
+  it('gives CASE_TOKEN_KEY only to api, which signs case tokens, and mcp, which verifies them (02 G4)', () => {
+    expect(holders('CASE_TOKEN_KEY')).toEqual(['api', 'mcp']);
+  });
+
+  it('starts api only once mcp is healthy, so the worker never claims a case it cannot run', () => {
+    const dependsOn = (
+      compose.services.api as {
+        depends_on?: Record<string, { condition: string }>;
+      }
+    ).depends_on;
+    expect(dependsOn?.mcp?.condition).toBe('service_healthy');
+  });
+
+  it('gives api a stop grace period past the run timeout, so a stop lets the attempt in flight finish', () => {
+    const grace = (compose.services.api as { stop_grace_period?: string })
+      .stop_grace_period;
+    // The config's ceiling: a 600 s case token minus its 60 s margin.
+    const MAX_RUN_TIMEOUT_S = 540;
+    expect(Number.parseInt(grace ?? '0', 10)).toBeGreaterThan(
+      MAX_RUN_TIMEOUT_S,
+    );
+  });
+
+  it('runs the agent worker in api with its switches declared', () => {
+    expect(env('api')).toMatchObject({
+      AGENT_WORKER: '${AGENT_WORKER:-on}',
+      AGENT_POLL_MS: '${AGENT_POLL_MS:-1000}',
+    });
+  });
+
+  it('runs variant A unless told otherwise, as the 03 rule decided on the final run (EVALS.md)', () => {
+    expect(env('api')).toMatchObject({
+      AGENT_VARIANT: '${AGENT_VARIANT:-A}',
+    });
+    const example = readFileSync(
+      resolve(import.meta.dirname, '../../../.env.example'),
+      'utf8',
+    );
+    expect(example).toMatch(/^AGENT_VARIANT=A$/m);
+  });
+
+  it("runs the local stack on the dataset clock, started at the data's today (01 Case clock)", () => {
+    expect(env('api')).toMatchObject({
+      CASE_CLOCK: '${CASE_CLOCK:-dataset}',
+      CASE_CLOCK_START: `${'${'}CASE_CLOCK_START:-${DATASET_NOW}}`,
+    });
+    const example = readFileSync(
+      resolve(import.meta.dirname, '../../../.env.example'),
+      'utf8',
+    );
+    expect(example).toMatch(/^CASE_CLOCK=dataset$/m);
+    expect(example).toContain(`\nCASE_CLOCK_START=${DATASET_NOW}\n`);
+  });
+
+  it('gives WEBHOOK_SECRET only to api, which verifies tickets and signs console cases', () => {
+    expect(holders('WEBHOOK_SECRET')).toEqual(['api']);
+  });
+
+  it('gives the owner database URL only to seed', () => {
+    expect(holders('DATABASE_URL')).toEqual(['seed']);
+  });
+
+  it('connects api, executor and mcp each with its own role', () => {
+    expect(env('api').API_DATABASE_URL).toMatch(/^postgresql:\/\/payments_api:/);
+    expect(env('executor').EXECUTOR_DATABASE_URL).toMatch(
+      /^postgresql:\/\/payments_executor:/,
+    );
+    expect(holders('EXECUTOR_DATABASE_URL')).toEqual(['executor']);
+    expect(env('mcp').MCP_DATABASE_URL).toMatch(/^postgresql:\/\/payments_mcp:/);
+    expect(holders('API_DATABASE_URL')).toEqual(['api']);
+    expect(holders('MCP_DATABASE_URL')).toEqual(['mcp']);
+  });
+
+  it('starts api, executor and mcp only after seed has migrated', () => {
+    const dependsOn = (service: string) =>
+      (
+        compose.services[service] as {
+          depends_on?: Record<string, { condition: string }>;
+        }
+      ).depends_on ?? {};
+    expect(dependsOn('api').seed?.condition).toBe(
+      'service_completed_successfully',
+    );
+    expect(dependsOn('mcp').seed?.condition).toBe(
+      'service_completed_successfully',
+    );
+    expect(dependsOn('executor').seed?.condition).toBe(
+      'service_completed_successfully',
+    );
+  });
+
+  it('restarts the executor and checks it is alive, so the sweeper always comes back (01 failure handling)', () => {
+    const executor = compose.services.executor as {
+      restart?: string;
+      healthcheck?: { test?: unknown };
+    };
+    expect(executor.restart).toBe('unless-stopped');
+    expect(JSON.stringify(executor.healthcheck?.test)).toContain(
+      'executor-alive',
+    );
+  });
+});
+
+describe('compose database logs (02 G6)', () => {
+  it('keeps key values and failing rows out of the Postgres log', () => {
+    const { command } = compose.services.db as { command?: string[] };
+    expect(command).toEqual(['postgres', '-c', 'log_error_verbosity=terse']);
+  });
+});
+
+describe('compose console (01 §Components, 02 G3, G7)', () => {
+  const console = compose.services.console;
+
+  it('serves the console on CONSOLE_PORT once api is healthy', () => {
+    expect(console?.ports).toEqual(['${CONSOLE_PORT:-5173}:8080']);
+    expect(console?.depends_on?.api?.condition).toBe('service_healthy');
+  });
+
+  it('lets api trust a forwarded address only from the console', () => {
+    const address = console?.networks?.default?.ipv4_address;
+    expect(address).toBe('${CONSOLE_IP:-10.231.0.10}');
+    expect(env('api').TRUST_PROXY).toBe(address);
+  });
+
+  it('keeps the console address out of the pool Docker hands out', () => {
+    const network = (
+      compose as {
+        networks?: {
+          default?: {
+            ipam?: { config?: { subnet?: string; ip_range?: string }[] };
+          };
+        };
+      }
+    ).networks?.default?.ipam?.config?.[0];
+    expect(network).toEqual({
+      subnet: '${COMPOSE_SUBNET:-10.231.0.0/24}',
+      ip_range: '${COMPOSE_IP_RANGE:-10.231.0.128/25}',
+    });
+  });
+
+  it('keeps every .env file out of every image', () => {
+    const ignored = readFileSync(
+      resolve(import.meta.dirname, '../../../.dockerignore'),
+      'utf8',
+    ).split('\n');
+    expect(ignored).toContain('**/.env*');
+  });
+
+  it('gives the console no environment, so it holds no secret', () => {
+    expect(console?.environment).toBeUndefined();
+  });
+});

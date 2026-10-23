@@ -1,0 +1,44 @@
+{
+  "name": "@payments-case-agent/api",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./test-database": "./test/database.ts",
+    "./evals": "./src/evals/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "db:generate": "drizzle-kit generate",
+    "canary:inject": "node --import tsx src/canaries/main.ts",
+    "demo:post": "node --import tsx src/demo/main.ts",
+    "ops:scan-logs": "node --import tsx src/ops/scan-logs.main.ts",
+    "ops:scan-traces": "node --import tsx src/ops/scan-traces.main.ts"
+  },
+  "dependencies": {
+    "@ai-sdk/anthropic": "4.0.72",
+    "@ai-sdk/mcp": "2.0.67",
+    "@payments-case-agent/contracts": "workspace:*",
+    "@nestjs/common": "11.2.7",
+    "@nestjs/core": "11.2.7",
+    "@nestjs/platform-express": "11.2.7",
+    "ai": "7.0.128",
+    "drizzle-orm": "0.45.3",
+    "jose": "6.2.12",
+    "postgres": "3.4.9",
+    "reflect-metadata": "0.2.2",
+    "rxjs": "7.8.2",
+    "tsx": "4.23.15",
+    "yaml": "2.9.1",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@ai-sdk/otel": "1.0.128",
+    "@payments-case-agent/core-mock": "workspace:*",
+    "@nestjs/testing": "11.2.7",
+    "@opentelemetry/api": "1.9.1",
+    "@opentelemetry/sdk-trace": "2.12.0",
+    "@testcontainers/postgresql": "12.2.0",
+    "@types/express": "5.0.6",
+    "drizzle-kit": "0.31.11"
+  }
+}

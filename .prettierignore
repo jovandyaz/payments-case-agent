@@ -1,0 +1,8 @@
+pnpm-lock.yaml
+specs/
+data/**/*.json
+
+docs/agent-setup/
+.superpowers/
+apps/api/drizzle/
+data/CUSTOMERS.md

@@ -1,0 +1,15 @@
+{
+  "name": "@payments-case-agent/data",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "generate": "tsx write-dataset.ts"
+  },
+  "dependencies": {
+    "@payments-case-agent/contracts": "workspace:*"
+  }
+}

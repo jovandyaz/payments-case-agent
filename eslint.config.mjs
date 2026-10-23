@@ -1,0 +1,216 @@
+// @ts-check
+import js from '@eslint/js';
+import { defineConfig } from 'eslint/config';
+import globals from 'globals';
+import tseslint from 'typescript-eslint';
+
+const AGENT_TO_EXECUTOR =
+  'G1: the agent module and the eval runner must not import the executor (specs/02-security.md).';
+const AGENT_TO_WRITE_CLIENT =
+  'G1: only the executor may hold the core-mock write client (specs/02-security.md).';
+const AGENT_TO_CORE_READ =
+  'G4: the agent, in the api or the eval runner, reads core data only through the MCP tools bound to its case (specs/02-security.md).';
+const EXECUTOR_TO_AGENT =
+  'G1: the executor must not import the agent module (specs/02-security.md).';
+
+// no-restricted-imports sees only static imports and re-exports.
+const dynamicImportOf = (segment, message) => ({
+  selector: `ImportExpression[source.value=/(^|\\/)${segment}(\\/|\\.js$|$)/]`,
+  message,
+});
+const COMPUTED_DYNAMIC_IMPORT = {
+  selector: "ImportExpression[source.type!='Literal']",
+  message:
+    'G1: a dynamic import here takes a literal path, so the boundary rules can check it (specs/02-security.md).',
+};
+
+const CONSOLE_PLAIN_TEXT =
+  'G7: the console renders text as text, never as markup (specs/02-security.md).';
+const CONSOLE_CONTRACTS =
+  'The browser bundle takes runtime values only from @payments-case-agent/contracts/console; the barrel holds Node-only code.';
+
+const LOAD_THROUGH_IMPORT =
+  'G1: load modules through import, so the boundary rules can check them (specs/02-security.md).';
+
+// Ways to load a module that no import rule sees.
+const MODULE_LOADERS = ['module', 'node:module'].map((name) => ({
+  name,
+  message: LOAD_THROUGH_IMPORT,
+}));
+const CORE_READ_CLIENT = [
+  "Identifier[name='createCoreClient']",
+  "Literal[value='createCoreClient']",
+  "Identifier[name='CORE_READ_KEY']",
+  "Literal[value='CORE_READ_KEY']",
+  "Identifier[name='CORE_CLIENT']",
+  "Literal[value='CORE_CLIENT']",
+  "Literal[value='DECIDE_DEPS']",
+  "Identifier[name='CONSOLE_DEPS']",
+  "Literal[value='CONSOLE_DEPS']",
+  'Literal[value=/^x-core-key$/i]',
+  'TemplateElement[value.raw=/x-core-key/i]',
+].map((selector) => ({ selector, message: AGENT_TO_CORE_READ }));
+const LOADER_SYNTAX = [
+  'ImportExpression[source.value=/^(node:)?module$/]',
+  "Identifier[name='getBuiltinModule']",
+  "Literal[value='getBuiltinModule']",
+  "CallExpression[callee.name='require']",
+  "MemberExpression[object.name='module'][property.name='require']",
+  "CallExpression[callee.name='eval']",
+  "CallExpression[callee.name='Function']",
+  "NewExpression[callee.name='Function']",
+].map((selector) => ({ selector, message: LOAD_THROUGH_IMPORT }));
+
+export default defineConfig(
+  {
+    ignores: [
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/coverage/**',
+      '.superpowers/**',
+      'docs/agent-setup/**',
+    ],
+  },
+  {
+    files: ['**/*.{js,mjs,cjs}'],
+    extends: [js.configs.recommended],
+    languageOptions: { globals: globals.node },
+  },
+  {
+    files: ['**/*.{ts,tsx,mts,cts}'],
+    extends: [js.configs.recommended, tseslint.configs.recommendedTypeChecked],
+    languageOptions: {
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+  },
+  {
+    // 02 G1: the process running the model has no write path, so nothing under
+    // the agent module, or the eval runner that runs it in-process, may import
+    // the executor or the core-mock write client.
+    // 02 G4: its core data comes only through the MCP tools, so it may not
+    // reach the API's core read client, its key, or the approvals and console
+    // modules that hold it.
+    files: [
+      'apps/api/src/agent/**/*.{ts,tsx,mts,cts,js,mjs,cjs}',
+      'apps/api/src/evals/**/*.{ts,tsx,mts,cts,js,mjs,cjs}',
+      'evals/**/*.{ts,tsx,mts,cts,js,mjs,cjs}',
+    ],
+    linterOptions: { noInlineConfig: true },
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: MODULE_LOADERS,
+          patterns: [
+            {
+              group: ['**/executor', '**/executor/**'],
+              message: AGENT_TO_EXECUTOR,
+            },
+            {
+              group: [
+                '**/approvals',
+                '**/approvals/**',
+                '**/console',
+                '**/console/**',
+              ],
+              message: AGENT_TO_CORE_READ,
+            },
+            {
+              group: [
+                '**/core-write-client',
+                '**/core-write-client.js',
+                '**/core-write-client/**',
+                '@payments-case-agent/core-mock',
+                '@payments-case-agent/core-mock/**',
+              ],
+              message: AGENT_TO_WRITE_CLIENT,
+            },
+          ],
+        },
+      ],
+      'no-restricted-syntax': [
+        'error',
+        dynamicImportOf('executor', AGENT_TO_EXECUTOR),
+        dynamicImportOf('core-write-client', AGENT_TO_WRITE_CLIENT),
+        dynamicImportOf('core-mock', AGENT_TO_WRITE_CLIENT),
+        COMPUTED_DYNAMIC_IMPORT,
+        dynamicImportOf('approvals', AGENT_TO_CORE_READ),
+        dynamicImportOf('console', AGENT_TO_CORE_READ),
+        ...LOADER_SYNTAX,
+        ...CORE_READ_CLIENT,
+      ],
+    },
+  },
+  {
+    // 02 G1, the other direction: the executor never imports the agent module.
+    files: ['apps/api/src/executor/**/*.{ts,tsx,mts,cts,js,mjs,cjs}'],
+    linterOptions: { noInlineConfig: true },
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: MODULE_LOADERS,
+          patterns: [
+            {
+              group: ['**/agent', '**/agent/**'],
+              message: EXECUTOR_TO_AGENT,
+            },
+          ],
+        },
+      ],
+      'no-restricted-syntax': [
+        'error',
+        dynamicImportOf('agent', EXECUTOR_TO_AGENT),
+        COMPUTED_DYNAMIC_IMPORT,
+        ...LOADER_SYNTAX,
+      ],
+    },
+  },
+  {
+    // 02 G7: customer text, policy text and model output are data; nothing
+    // in the console turns a string into markup.
+    files: ['apps/console/**/*.{ts,tsx}'],
+    linterOptions: { noInlineConfig: true },
+    languageOptions: { globals: globals.browser },
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        ...[
+          'JSXAttribute[name.name=/^(dangerouslySetInnerHTML|srcDoc)$/i]',
+          'MemberExpression[property.name=/^(innerHTML|outerHTML|srcDoc)$/i]',
+          'MemberExpression[computed=true][property.value=/^(innerHTML|outerHTML|srcDoc)$/i]',
+          'CallExpression[callee.property.name=/^(insertAdjacentHTML|createContextualFragment|setHTMLUnsafe|parseFromString)$/]',
+          "CallExpression[callee.object.name='document'][callee.property.name=/^(write|writeln)$/]",
+        ].map((selector) => ({ selector, message: CONSOLE_PLAIN_TEXT })),
+      ],
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: '@payments-case-agent/contracts',
+              message: CONSOLE_CONTRACTS,
+              allowTypeImports: true,
+            },
+          ],
+          patterns: [
+            {
+              group: [
+                '*markdown*',
+                'marked',
+                'remark*',
+                'rehype*',
+                'html-react-parser',
+                'dompurify',
+              ],
+              message: CONSOLE_PLAIN_TEXT,
+            },
+          ],
+        },
+      ],
+    },
+  },
+);

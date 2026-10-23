@@ -1,0 +1,17 @@
+{
+  "name": "@payments-case-agent/core-mock",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/server.ts"
+  },
+  "scripts": {
+    "start": "node --import tsx src/main.ts",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@payments-case-agent/contracts": "workspace:*",
+    "tsx": "4.23.15",
+    "zod": "^4.6.5"
+  }
+}

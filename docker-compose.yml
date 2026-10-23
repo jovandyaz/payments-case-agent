@@ -1,0 +1,180 @@
+name: payments-case-agent
+
+services:
+  db:
+    image: postgres:16-alpine
+    # A constraint error's DETAIL carries key values and the failing row,
+    # which may hold digits a sender chose (02 G6); the client still gets it.
+    command: ['postgres', '-c', 'log_error_verbosity=terse']
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-payments}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-payments}
+      POSTGRES_DB: ${POSTGRES_DB:-payments}
+    ports:
+      - '${POSTGRES_PORT:-5433}:5432'
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+  seed:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    command: ['node', '--import', 'tsx', 'src/seed/main.ts']
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-payments}:${POSTGRES_PASSWORD:-payments}@db:5432/${POSTGRES_DB:-payments}
+      API_DB_PASSWORD: ${API_DB_PASSWORD:-dev-api-db-password}
+      EXECUTOR_DB_PASSWORD: ${EXECUTOR_DB_PASSWORD:-dev-executor-db-password}
+      MCP_DB_PASSWORD: ${MCP_DB_PASSWORD:-dev-mcp-db-password}
+    restart: 'no'
+    depends_on:
+      db:
+        condition: service_healthy
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      API_PORT: 3000
+      API_DATABASE_URL: postgresql://payments_api:${API_DB_PASSWORD:-dev-api-db-password}@db:5432/${POSTGRES_DB:-payments}
+      OPERATOR_TOKENS: ${OPERATOR_TOKENS:-ana:k1:dev-operator-ana-token-0123456789,beto:k1:dev-operator-beto-token-0123456789}
+      CORE_MOCK_URL: http://core-mock:3010
+      CORE_READ_KEY: ${CORE_READ_KEY:-dev-core-read-key}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      AGENT_MODE: ${AGENT_MODE:-on}
+      AGENT_WORKER: ${AGENT_WORKER:-on}
+      AGENT_POLL_MS: ${AGENT_POLL_MS:-1000}
+      AGENT_VARIANT: ${AGENT_VARIANT:-A}
+      AGENT_MODEL_A: ${AGENT_MODEL_A:-claude-sonnet-5-5}
+      AGENT_MODEL_B: ${AGENT_MODEL_B:-claude-haiku-5-5}
+      REDACTOR_MODEL: ${REDACTOR_MODEL:-claude-haiku-5-5}
+      RUN_TIMEOUT_MS: ${RUN_TIMEOUT_MS:-180000}
+      RUN_COST_CEILING_USD: ${RUN_COST_CEILING_USD:-0.5}
+      RUN_INPUT_TOKEN_CEILING: ${RUN_INPUT_TOKEN_CEILING:-60000}
+      MCP_URL: http://mcp:3020/mcp
+      MCP_AUDIENCE: ${MCP_AUDIENCE:-http://mcp:3020/mcp}
+      CASE_TOKEN_KEY: ${CASE_TOKEN_KEY:-dev-case-token-key-0123456789abcdef}
+      WEBHOOK_SECRET: ${WEBHOOK_SECRET:-whsec_ZGV2LXdlYmhvb2stc2VjcmV0LTAxMjM0NTY3ODlhYmNkZWY=}
+      CANARY_SPREAD_MS: ${CANARY_SPREAD_MS:-300000}
+      CASE_CLOCK: ${CASE_CLOCK:-dataset}
+      CASE_CLOCK_START: ${CASE_CLOCK_START:-2026-10-05T15:00:00-06:00}
+      # Only the console's nginx may tell api the operator's address (02 G3).
+      TRUST_PROXY: ${CONSOLE_IP:-10.231.0.10}
+    ports:
+      - '${API_PORT:-3000}:3000'
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+      mcp:
+        condition: service_healthy
+    # Past the longest RUN_TIMEOUT_MS the config accepts, so a stop lets the
+    # attempt in flight finish.
+    stop_grace_period: 600s
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:3000/health || exit 1']
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+  executor:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    command: ['node', '--import', 'tsx', 'src/executor/main.ts']
+    environment:
+      EXECUTOR_DATABASE_URL: postgresql://payments_executor:${EXECUTOR_DB_PASSWORD:-dev-executor-db-password}@db:5432/${POSTGRES_DB:-payments}
+      CORE_MOCK_URL: http://core-mock:3010
+      CORE_EXECUTOR_KEY: ${CORE_EXECUTOR_KEY:-dev-core-executor-key}
+      EXECUTOR_POLL_MS: ${EXECUTOR_POLL_MS:-1000}
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD-SHELL', 'find /tmp/executor-alive -mmin -1 | grep -q .']
+      interval: 10s
+      timeout: 3s
+      retries: 6
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+      core-mock:
+        condition: service_healthy
+
+  core-mock:
+    build:
+      context: .
+      dockerfile: apps/core-mock/Dockerfile
+    environment:
+      CORE_MOCK_PORT: 3010
+      CORE_READ_KEY: ${CORE_READ_KEY:-dev-core-read-key}
+      CORE_EXECUTOR_KEY: ${CORE_EXECUTOR_KEY:-dev-core-executor-key}
+      CORE_DB_PATH: /var/lib/core-mock/core.db
+    ports:
+      - '${CORE_MOCK_PORT:-3010}:3010'
+    volumes:
+      - core-mock-data:/var/lib/core-mock
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:3010/health || exit 1']
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+  mcp:
+    build:
+      context: .
+      dockerfile: apps/mcp/Dockerfile
+    environment:
+      MCP_PORT: 3020
+      MCP_AUDIENCE: ${MCP_AUDIENCE:-http://mcp:3020/mcp}
+      MCP_ALLOWED_HOSTS: ${MCP_ALLOWED_HOSTS:-mcp}
+      CASE_TOKEN_KEY: ${CASE_TOKEN_KEY:-dev-case-token-key-0123456789abcdef}
+      CORE_MOCK_URL: http://core-mock:3010
+      CORE_READ_KEY: ${CORE_READ_KEY:-dev-core-read-key}
+      MCP_DATABASE_URL: postgresql://payments_mcp:${MCP_DB_PASSWORD:-dev-mcp-db-password}@db:5432/${POSTGRES_DB:-payments}
+    ports:
+      - '${MCP_PORT:-3020}:3020'
+    depends_on:
+      core-mock:
+        condition: service_healthy
+      seed:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:3020/health || exit 1']
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+  console:
+    build:
+      context: .
+      dockerfile: apps/console/Dockerfile
+    ports:
+      - '${CONSOLE_PORT:-5173}:8080'
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      default:
+        ipv4_address: ${CONSOLE_IP:-10.231.0.10}
+    healthcheck:
+      test:
+        ['CMD-SHELL', 'wget -qO- http://127.0.0.1:8080/ >/dev/null || exit 1']
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: ${COMPOSE_SUBNET:-10.231.0.0/24}
+          # Docker hands out only this half, so no other container can take
+          # CONSOLE_IP, the one address api trusts.
+          ip_range: ${COMPOSE_IP_RANGE:-10.231.0.128/25}
+
+volumes:
+  db-data:
+  core-mock-data:
