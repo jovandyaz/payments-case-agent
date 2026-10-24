@@ -62,9 +62,7 @@ jobs:
         if: always()
         with:
           name: eval-results
-          path: |
-            evals/results/
-            evals/baseline.json
+          path: evals/results/
           retention-days: 30
           if-no-files-found: ignore
       - name: Stop the stack
