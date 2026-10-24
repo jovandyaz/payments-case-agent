@@ -1,0 +1,72 @@
+# Runs the paid eval suite (specs/03-evals.md) against a compose stack on the runner.
+# Every dispatch spends model budget: a full run of both variants cost USD 5.18 on 2026-10-23.
+# The results are uploaded as an artifact, never committed by this workflow.
+name: Eval
+
+on:
+  workflow_dispatch:
+    inputs:
+      variant:
+        description: Variant to run
+        type: choice
+        options: [A, B, both]
+        default: A
+      only:
+        description: Passed to --only (ADV, high-stakes or a scenario id); empty runs every case
+        type: string
+        required: false
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      AGENT_MODE: 'on'
+      EVAL_VARIANT: ${{ inputs.variant }}
+      EVAL_ONLY: ${{ inputs.only }}
+    steps:
+      - name: Require the API key
+        run: |
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "::error::The ANTHROPIC_API_KEY repository secret is not set; add it under Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build and start the stack
+        run: docker compose up --detach --build --wait
+      - name: Run the evals
+        run: |
+          args=(--variant "$EVAL_VARIANT")
+          if [ -n "$EVAL_ONLY" ]; then args+=(--only "$EVAL_ONLY"); fi
+          pnpm eval "${args[@]}"
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: eval-results
+          path: |
+            evals/results/
+            evals/baseline.json
+          retention-days: 30
+          if-no-files-found: ignore
+      - name: Stop the stack
+        if: always()
+        run: docker compose down --volumes
