@@ -11,6 +11,7 @@
     "typecheck": "tsc -p tsconfig.json && tsc -p scripts/tsconfig.json && pnpm -r --if-present typecheck",
     "lint": "eslint .",
     "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "test:unit": "vitest run --project unit --project console",
     "test:hooks": "node --test \".claude/hooks/__tests__/*.test.mjs\"",
     "verify": "pnpm typecheck && pnpm lint && pnpm test:unit && pnpm test:hooks",
