@@ -1,4 +1,7 @@
-import { CASE_STATUSES, MAX_MANUAL_RERUNS } from '@payments-case-agent/contracts';
+import {
+  CASE_STATUSES,
+  MAX_MANUAL_RERUNS,
+} from '@payments-case-agent/contracts';
 import { describe, expect, it } from 'vitest';
 
 import { rerunTarget } from './case-transition.js';

@@ -2,7 +2,10 @@ import { createHash } from 'node:crypto';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
-import { StateRuleSchema, type StateRule } from '@payments-case-agent/contracts';
+import {
+  StateRuleSchema,
+  type StateRule,
+} from '@payments-case-agent/contracts';
 import { parse } from 'yaml';
 import { z } from 'zod';
 

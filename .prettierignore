@@ -6,3 +6,4 @@ docs/agent-setup/
 .superpowers/
 apps/api/drizzle/
 data/CUSTOMERS.md
+evals/results/

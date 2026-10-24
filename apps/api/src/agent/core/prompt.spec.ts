@@ -1,4 +1,7 @@
-import { APPROVED_FACTOR_WARNINGS, maskPii } from '@payments-case-agent/contracts';
+import {
+  APPROVED_FACTOR_WARNINGS,
+  maskPii,
+} from '@payments-case-agent/contracts';
 import { describe, expect, it, vi } from 'vitest';
 
 import { PLACEHOLDERS } from './validate/placeholders.js';

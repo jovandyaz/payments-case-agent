@@ -110,12 +110,16 @@ describe('compose process boundary (02 G1)', () => {
   });
 
   it('connects api, executor and mcp each with its own role', () => {
-    expect(env('api').API_DATABASE_URL).toMatch(/^postgresql:\/\/payments_api:/);
+    expect(env('api').API_DATABASE_URL).toMatch(
+      /^postgresql:\/\/payments_api:/,
+    );
     expect(env('executor').EXECUTOR_DATABASE_URL).toMatch(
       /^postgresql:\/\/payments_executor:/,
     );
     expect(holders('EXECUTOR_DATABASE_URL')).toEqual(['executor']);
-    expect(env('mcp').MCP_DATABASE_URL).toMatch(/^postgresql:\/\/payments_mcp:/);
+    expect(env('mcp').MCP_DATABASE_URL).toMatch(
+      /^postgresql:\/\/payments_mcp:/,
+    );
     expect(holders('API_DATABASE_URL')).toEqual(['api']);
     expect(holders('MCP_DATABASE_URL')).toEqual(['mcp']);
   });

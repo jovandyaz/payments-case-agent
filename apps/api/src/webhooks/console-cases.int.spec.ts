@@ -1,4 +1,7 @@
-import { EVENT_ID_PREFIX, TICKET_ID_PREFIX } from '@payments-case-agent/contracts';
+import {
+  EVENT_ID_PREFIX,
+  TICKET_ID_PREFIX,
+} from '@payments-case-agent/contracts';
 import type { INestApplication } from '@nestjs/common';
 import postgres from 'postgres';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';

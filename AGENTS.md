@@ -4,24 +4,24 @@ An agent that investigates a customer case with read-only tools and policies, pr
 
 ## Map
 
-| Path                              | What lives there                                                                                                      | Spec      |
-| --------------------------------- | --------------------------------------------------------------------------------------------------------------------- | --------- |
-| `specs/`                          | Scope, architecture, security, evals, references                                                                      | —         |
-| `apps/api`                        | NestJS 11: webhook, queue worker, harness, retrieval, decisions, executor                                             | 01        |
-| `apps/api/src/agent/core`         | Harness core, plain TypeScript, no Nest DI (the eval runner calls it directly)                                        | 01        |
-| `apps/mcp`                        | MCP server, four read-only tools bound to a case token                                                                | 01, 02 G4 |
-| `apps/core-mock`                  | Synthetic core banking API; the only write endpoints, for the executor                                                | 01        |
-| `apps/console`                    | React ops console                                                                                                     | 01        |
-| `packages/contracts`              | Zod schemas and `maskPii`                                                                                             | 01, 02 G6 |
-| `data/`                           | Seeded dataset and its CUSTOMERS.md view, scenarios, policy docs, webhook fixtures                                    | 00, 03    |
-| `evals/`                          | promptfoo runner, labeled cases, judge calibration                                                                    | 03        |
-| `e2e/`                            | Playwright end-to-end tests of the console against the compose stack                                                  | 01        |
-| `scripts/dev/`                    | `pnpm start`, `stop`, `reset`, `e2e:isolated`: preflight and the local compose stack in one command; `commit-gate.sh` | —         |
-| `docs/agent-setup/`               | Snapshot of the global agent setup used to build this                                                                 | —         |
-| `.claude/skills/`                 | `add-eval-case` and `add-policy-doc`: the two project skills for small changes                                        | —         |
-| `ops/`                            | Alert and metric SQL, on-call README                                                                                  | 01        |
-| `docs/roadmap.md`                 | What comes next, by priority                                                                                          | —         |
-| root `*.md`, `docs/compliance.md` | Docs: README, DESIGN, EVALS (results), PLAYBOOK (teams reusing it), AI_NOTES; the compliance appendix                 | 03        |
+| Path                              | What lives there                                                                                      | Spec      |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------- | --------- |
+| `specs/`                          | Scope, architecture, security, evals, references                                                      | —         |
+| `apps/api`                        | NestJS 11: webhook, queue worker, harness, retrieval, decisions, executor                             | 01        |
+| `apps/api/src/agent/core`         | Harness core, plain TypeScript, no Nest DI (the eval runner calls it directly)                        | 01        |
+| `apps/mcp`                        | MCP server, four read-only tools bound to a case token                                                | 01, 02 G4 |
+| `apps/core-mock`                  | Synthetic core banking API; the only write endpoints, for the executor                                | 01        |
+| `apps/console`                    | React ops console                                                                                     | 01        |
+| `packages/contracts`              | Zod schemas and `maskPii`                                                                             | 01, 02 G6 |
+| `data/`                           | Seeded dataset and its CUSTOMERS.md view, scenarios, policy docs, webhook fixtures                    | 00, 03    |
+| `evals/`                          | promptfoo runner, labeled cases, judge calibration                                                    | 03        |
+| `e2e/`                            | Playwright end-to-end tests of the console against the compose stack                                  | 01        |
+| `scripts/dev/`                    | `pnpm start`, `stop`, `reset`, `e2e:isolated`: preflight and the local compose stack in one command   | —         |
+| `docs/agent-setup/`               | Snapshot of the global agent setup used to build this                                                 | —         |
+| `.claude/skills/`                 | `add-eval-case` and `add-policy-doc`: the two project skills for small changes                        | —         |
+| `ops/`                            | Alert and metric SQL, on-call README                                                                  | 01        |
+| `docs/roadmap.md`                 | What comes next, by priority                                                                          | —         |
+| root `*.md`, `docs/compliance.md` | Docs: README, DESIGN, EVALS (results), PLAYBOOK (teams reusing it), AI_NOTES; the compliance appendix | 03        |
 
 ## Commands
 

@@ -2,7 +2,10 @@ import { access, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
 
-import { fillPlaceholders, type JudgeInput } from '@payments-case-agent/api/evals';
+import {
+  fillPlaceholders,
+  type JudgeInput,
+} from '@payments-case-agent/api/evals';
 import { FOLIO_GROUP_PATTERN } from '@payments-case-agent/contracts';
 
 import { fixtureOf } from '../fixtures.js';

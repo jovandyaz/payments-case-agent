@@ -544,12 +544,13 @@ describe('transition matrix (02 G1, G3)', () => {
       !canary &&
       ['executed', 'failed'].includes(to));
 
-  const cases = (['payments_api', 'payments_executor'] as const).flatMap((role) =>
-    ACTION_STATUSES.flatMap((from) =>
-      ACTION_STATUSES.filter((to) => to !== from).flatMap((to) =>
-        [false, true].map((canary) => ({ role, from, to, canary })),
+  const cases = (['payments_api', 'payments_executor'] as const).flatMap(
+    (role) =>
+      ACTION_STATUSES.flatMap((from) =>
+        ACTION_STATUSES.filter((to) => to !== from).flatMap((to) =>
+          [false, true].map((canary) => ({ role, from, to, canary })),
+        ),
       ),
-    ),
   );
 
   beforeAll(async () => {

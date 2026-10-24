@@ -10,7 +10,10 @@ export const MAX_CONSECUTIVE_BLOCKS = 2;
 const WORKSPACE_ROOT = dirname(
   dirname(dirname(fileURLToPath(import.meta.url))),
 );
-const STATE_DIR = join(tmpdir(), `payments-case-agent-stop-verify-${userInfo().uid}`);
+const STATE_DIR = join(
+  tmpdir(),
+  `payments-case-agent-stop-verify-${userInfo().uid}`,
+);
 const OUTPUT_LIMIT = 20 * 1024 * 1024;
 
 export function statePath(sessionId, stateDir = STATE_DIR) {

@@ -1,4 +1,7 @@
-import type { CaseDetail, InboxItem } from '@payments-case-agent/contracts/console';
+import type {
+  CaseDetail,
+  InboxItem,
+} from '@payments-case-agent/contracts/console';
 import { cleanup, fireEvent, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 

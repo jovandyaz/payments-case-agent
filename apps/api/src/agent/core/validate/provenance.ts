@@ -1,4 +1,7 @@
-import type { Resolution, ValidationCode } from '@payments-case-agent/contracts';
+import type {
+  Resolution,
+  ValidationCode,
+} from '@payments-case-agent/contracts';
 
 import type { RunEvidence } from './evidence.js';
 

@@ -1,0 +1,24 @@
+pre-commit:
+  piped: true
+  jobs:
+    - name: eslint
+      run: pnpm exec eslint --fix --no-warn-ignored {staged_files}
+      glob: '*.{ts,tsx,mjs}'
+      skip: [merge, rebase]
+      stage_fixed: true
+    - name: prettier
+      run: pnpm exec prettier --write --ignore-unknown {staged_files}
+      skip: [merge, rebase]
+      stage_fixed: true
+
+commit-msg:
+  jobs:
+    - name: conventional-commit
+      run: node scripts/dev/commit-msg.ts {1}
+      skip: [merge, rebase]
+
+pre-push:
+  jobs:
+    - name: verify
+      run: pnpm verify
+      skip: [merge, rebase]

@@ -46,7 +46,9 @@ describe('replyViolations (02 G5, the checks a final reply shares with the draft
 
   it('passes a link to Brisa', () => {
     expect(
-      replyViolations(`${CLEAN} Más información en https://brisa.example/ayuda.`),
+      replyViolations(
+        `${CLEAN} Más información en https://brisa.example/ayuda.`,
+      ),
     ).toEqual([]);
   });
 

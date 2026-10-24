@@ -7,5 +7,7 @@ packages:
 allowBuilds:
   cpu-features: false
   esbuild: true
+  lefthook: true
   protobufjs: false
   ssh2: false
+minimumReleaseAge: 4320
