@@ -10,3 +10,4 @@ allowBuilds:
   lefthook: true
   protobufjs: false
   ssh2: false
+minimumReleaseAge: 4320
