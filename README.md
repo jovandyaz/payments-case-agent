@@ -1,5 +1,7 @@
 # Payments Case Agent
 
+[![CI](https://github.com/jovandyaz/payments-case-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/jovandyaz/payments-case-agent/actions/workflows/ci.yml)
+
 An agent that investigates a customer case with read-only tools and policies, proposes a resolution, and leaves every consequential action to a human in ops. It is a personal project heading to an MVP ([roadmap](docs/roadmap.md)): a signed ticket webhook, one MCP server with four read-only tools bound to the case, cited policy retrieval, a validator after every model output, an ops console where an authenticated operator decides, and an executor in its own container. The specs in `specs/` are the design; `AGENTS.md` maps the code.
 
 ## Start here
