@@ -10,6 +10,9 @@ describe('commitMessageProblem', () => {
     'docs: add ADRs\n',
     'ci: pin actions\n# Please enter the commit message\n# Lines starting with # are ignored',
     'test: cover masking\n\n# ------------------------ >8 ------------------------\ndiff --git a/x b/x',
+    'fixup! feat: add the eval workflow',
+    'squash! fix(api): reject an unsigned webhook',
+    'amend! docs: add ADRs',
   ])('accepts %j', (message) =>
     expect(commitMessageProblem(message)).toBeNull(),
   );

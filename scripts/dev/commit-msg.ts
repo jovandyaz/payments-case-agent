@@ -17,7 +17,7 @@ const COMMIT_TYPES = [
 ] as const;
 
 const SUBJECT = new RegExp(
-  `^(${COMMIT_TYPES.join('|')})(\\([a-z0-9-]+\\))?!?: \\S`,
+  `^((fixup|squash|amend)! )*(${COMMIT_TYPES.join('|')})(\\([a-z0-9-]+\\))?!?: \\S`,
 );
 const VERBOSE_DIFF_SCISSORS =
   '# ------------------------ >8 ------------------------';

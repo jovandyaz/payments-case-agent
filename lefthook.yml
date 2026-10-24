@@ -15,6 +15,7 @@ commit-msg:
   jobs:
     - name: conventional-commit
       run: node scripts/dev/commit-msg.ts {1}
+      skip: [merge, rebase]
 
 pre-push:
   jobs:
