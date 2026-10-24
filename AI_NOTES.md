@@ -9,7 +9,7 @@ How this project is built with AI agents: the setup, what it sped up, one instru
 - **MCP** (`.mcp.json`): Context7, Playwright, read-only Postgres.
 - **Repo:** `AGENTS.md`, `CLAUDE.md`, `.claude/rules/`, three hooks (AGENTS.md §Hooks), skills `add-eval-case` and `add-policy-doc`; my user-level comment and magic-value hooks (`docs/agent-setup/hooks/`).
 
-Why: an agent reviewing its own work finds only what it already thought of. Every change runs one sequence (AGENTS.md §Working rules): a test-first build; fresh-context reviews, one per angle, plus the invariant reviewer on G paths; a fresh verifier on the real stack; `scripts/dev/commit-gate.sh`, which commits only what passes `pnpm verify` on Node 24, plus 22 as a compatibility check. Hooks back it up: no skipped or removed tests on protected G paths, no stopping while `pnpm verify` fails.
+Why: an agent reviewing its own work finds only what it already thought of. Every change runs one sequence (AGENTS.md §Working rules): a test-first build; fresh-context reviews, one per angle, plus the invariant reviewer on G paths; a fresh verifier on the real stack; git hooks locally (lefthook: lint and format of staged files, a one-line Conventional Commits check, `pnpm verify` before a push) and CI on every pull request (`pnpm verify`, the integration tests and the end-to-end run through the console). Hooks back it up: no skipped or removed tests on protected G paths, no stopping while `pnpm verify` fails.
 
 ## Speed-ups
 
