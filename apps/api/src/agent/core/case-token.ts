@@ -1,6 +1,9 @@
 import { randomUUID } from 'node:crypto';
 
-import { CASE_TOKEN_ISSUER, CASE_TOKEN_SCOPE } from '@payments-case-agent/contracts';
+import {
+  CASE_TOKEN_ISSUER,
+  CASE_TOKEN_SCOPE,
+} from '@payments-case-agent/contracts';
 import { SignJWT } from 'jose';
 
 import { CASE_TOKEN_MARGIN_MS } from '../../config.js';

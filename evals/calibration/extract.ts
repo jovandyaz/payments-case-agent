@@ -1,4 +1,7 @@
-import { acceptedDraftOf, JudgeInputSchema } from '@payments-case-agent/api/evals';
+import {
+  acceptedDraftOf,
+  JudgeInputSchema,
+} from '@payments-case-agent/api/evals';
 
 import { METADATA, rubricOf, storedRun } from '../results.js';
 import { variantOf } from '../runtime.js';

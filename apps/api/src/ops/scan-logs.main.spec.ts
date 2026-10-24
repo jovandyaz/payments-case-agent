@@ -1,4 +1,7 @@
-import { LogAlertSchema, ScanFailedLineSchema } from '@payments-case-agent/contracts';
+import {
+  LogAlertSchema,
+  ScanFailedLineSchema,
+} from '@payments-case-agent/contracts';
 import { describe, expect, it } from 'vitest';
 
 import { CLI_TIMEOUT_MS, linesOf, runApiCli } from '../../test/cli.js';

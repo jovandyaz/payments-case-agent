@@ -1,4 +1,7 @@
-import { MS_PER_HOUR, type ProposedAction } from '@payments-case-agent/contracts';
+import {
+  MS_PER_HOUR,
+  type ProposedAction,
+} from '@payments-case-agent/contracts';
 
 import { isSettled } from '../../../actions/allowed.js';
 import { pastSpeiWindow } from '../../../actions/spei-window.js';

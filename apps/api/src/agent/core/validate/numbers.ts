@@ -1,4 +1,7 @@
-import { REGISTRY_ID_IN_TEXT, visibleTailOf } from '@payments-case-agent/contracts';
+import {
+  REGISTRY_ID_IN_TEXT,
+  visibleTailOf,
+} from '@payments-case-agent/contracts';
 
 import { localDateOf } from '../calendar.js';
 import {

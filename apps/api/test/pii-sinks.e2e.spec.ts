@@ -2,7 +2,11 @@ import { randomUUID } from 'node:crypto';
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 
-import { maskPii, type CardTx, type Customer } from '@payments-case-agent/contracts';
+import {
+  maskPii,
+  type CardTx,
+  type Customer,
+} from '@payments-case-agent/contracts';
 import { createCoreMock, type CoreMock } from '@payments-case-agent/core-mock';
 import { createMcpApp, type McpApp } from '../../mcp/src/app.js';
 import { MockLanguageModelV4 } from 'ai/test';

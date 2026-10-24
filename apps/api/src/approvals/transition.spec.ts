@@ -1,4 +1,7 @@
-import { ACTION_STATUSES, type ActionStatus } from '@payments-case-agent/contracts';
+import {
+  ACTION_STATUSES,
+  type ActionStatus,
+} from '@payments-case-agent/contracts';
 import { describe, expect, it } from 'vitest';
 
 import { ACTION_EVENTS, transition, type ActionEvent } from './transition.js';

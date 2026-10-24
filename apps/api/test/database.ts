@@ -1,4 +1,8 @@
-import { DB_ROLES, newFolio, type DbRole } from '@payments-case-agent/contracts';
+import {
+  DB_ROLES,
+  newFolio,
+  type DbRole,
+} from '@payments-case-agent/contracts';
 import { PostgreSqlContainer } from '@testcontainers/postgresql';
 import type { Sql } from 'postgres';
 
