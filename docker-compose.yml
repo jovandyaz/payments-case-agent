@@ -11,7 +11,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-payments}
       POSTGRES_DB: ${POSTGRES_DB:-payments}
     ports:
-      - '${POSTGRES_PORT:-5433}:5432'
+      - '127.0.0.1:${POSTGRES_PORT:-5433}:5432'
     volumes:
       - db-data:/var/lib/postgresql/data
     healthcheck:
@@ -66,7 +66,7 @@ services:
       # Only the console's nginx may tell api the operator's address (02 G3).
       TRUST_PROXY: ${CONSOLE_IP:-10.231.0.10}
     ports:
-      - '${API_PORT:-3000}:3000'
+      - '127.0.0.1:${API_PORT:-3000}:3000'
     depends_on:
       seed:
         condition: service_completed_successfully
@@ -113,7 +113,7 @@ services:
       CORE_EXECUTOR_KEY: ${CORE_EXECUTOR_KEY:-dev-core-executor-key}
       CORE_DB_PATH: /var/lib/core-mock/core.db
     ports:
-      - '${CORE_MOCK_PORT:-3010}:3010'
+      - '127.0.0.1:${CORE_MOCK_PORT:-3010}:3010'
     volumes:
       - core-mock-data:/var/lib/core-mock
     healthcheck:
@@ -135,7 +135,7 @@ services:
       CORE_READ_KEY: ${CORE_READ_KEY:-dev-core-read-key}
       MCP_DATABASE_URL: postgresql://payments_mcp:${MCP_DB_PASSWORD:-dev-mcp-db-password}@db:5432/${POSTGRES_DB:-payments}
     ports:
-      - '${MCP_PORT:-3020}:3020'
+      - '127.0.0.1:${MCP_PORT:-3020}:3020'
     depends_on:
       core-mock:
         condition: service_healthy
@@ -152,7 +152,7 @@ services:
       context: .
       dockerfile: apps/console/Dockerfile
     ports:
-      - '${CONSOLE_PORT:-5173}:8080'
+      - '127.0.0.1:${CONSOLE_PORT:-5173}:8080'
     depends_on:
       api:
         condition: service_healthy
