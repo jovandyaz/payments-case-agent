@@ -11,3 +11,6 @@ allowBuilds:
   protobufjs: false
   ssh2: false
 minimumReleaseAge: 4320
+minimumReleaseAgeExclude:
+  # Renovate security update: zod@4.6.6
+  - zod@4.6.6
