@@ -15,13 +15,13 @@
     "ops:scan-traces": "node --import tsx src/ops/scan-traces.main.ts"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "4.0.72",
-    "@ai-sdk/mcp": "2.0.67",
+    "@ai-sdk/anthropic": "4.0.102",
+    "@ai-sdk/mcp": "2.0.96",
     "@payments-case-agent/contracts": "workspace:*",
     "@nestjs/common": "11.2.7",
     "@nestjs/core": "11.2.7",
     "@nestjs/platform-express": "11.2.7",
-    "ai": "7.0.128",
+    "ai": "7.0.169",
     "drizzle-orm": "0.45.3",
     "jose": "6.2.12",
     "postgres": "3.4.9",
@@ -32,7 +32,7 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
-    "@ai-sdk/otel": "1.0.128",
+    "@ai-sdk/otel": "1.0.169",
     "@payments-case-agent/core-mock": "workspace:*",
     "@nestjs/testing": "11.2.7",
     "@opentelemetry/api": "1.9.1",
