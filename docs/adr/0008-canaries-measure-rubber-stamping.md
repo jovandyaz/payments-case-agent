@@ -22,7 +22,7 @@ Seed the inbox with canary proposals and measure each operator's catch rate:
 
 ## Consequences
 
-- Review quality is a number per operator, not an assumption.
+- Review quality is a number per operator, not an assumption, weakened by known tells (DESIGN.md §Defense model, rubber-stamp review).
 - A canary's fabricated text never reaches the model provider, and a case holding a canary proposal without its `canary_cases` row is never claimed.
 - Canaries must be indistinguishable from real cases, so their templates track the agent's action mix and phrasing; the worker refuses to start when its models differ from the run the canaries were calibrated on.
 - Revisit the templates whenever the agent's behavior changes enough that a canary becomes recognizable.
@@ -32,4 +32,4 @@ Seed the inbox with canary proposals and measure each operator's catch rate:
 - [specs/02-security.md §Defense model](../../specs/02-security.md#defense-model), [§Threat model](../../specs/02-security.md#threat-model) (T11), [§Guarantees in code](../../specs/02-security.md#guarantees-in-code) (G3)
 - [ops/README.md](../../ops/README.md)
 - Code: `apps/api/src/canaries/`, `ops/alerts.sql`
-- Tests: `apps/api/src/canaries/canary-run.e2e.spec.ts`, `apps/api/src/canaries/inject-config.spec.ts`
+- Tests: `apps/api/src/canaries/canary-run.e2e.spec.ts`, `apps/api/src/canaries/inject-config.spec.ts`, `apps/api/src/approvals/approvals.int.spec.ts`, `apps/api/src/executor/executor.int.spec.ts`, `apps/api/test/alerts.int.spec.ts`

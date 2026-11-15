@@ -24,7 +24,7 @@ Use AI SDK 7 `ToolLoopAgent` with `output: Output.object({ schema: ResolutionSch
 ## Consequences
 
 - Budgets, timeouts and the forced synthesis are a few lines of configuration over SDK primitives.
-- Loop semantics follow the SDK: forced tool choice silently becomes `auto`, so the synthesis is forced by removing tools instead.
+- Loop semantics follow the SDK: the models reject a forced tool choice and the provider package downgrades it to `auto`, so the synthesis is forced by removing tools instead.
 - A repair is a new user turn appended to the run's messages; earlier turns are never edited, because thinking blocks are bound to the exact prefix.
 - Revisit when the SDK's loop can no longer express a budget or stop rule the specs require.
 
@@ -33,4 +33,4 @@ Use AI SDK 7 `ToolLoopAgent` with `output: Output.object({ schema: ResolutionSch
 - [specs/01-architecture.md §The agentic node](../../specs/01-architecture.md#the-agentic-node), [§Stack and verified APIs](../../specs/01-architecture.md#stack-and-verified-apis)
 - [DESIGN.md §Trade-offs](../../DESIGN.md#trade-offs)
 - Code: `apps/api/src/agent/core/agent.ts`, `apps/api/src/agent/core/run-case.ts`
-- Tests: `apps/api/src/agent/core/run-case.int.spec.ts`
+- Tests: `apps/api/src/agent/agent.spec.ts`, `apps/api/src/agent/core/run-case.int.spec.ts`

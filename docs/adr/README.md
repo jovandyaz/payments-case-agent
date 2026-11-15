@@ -2,7 +2,7 @@
 
 Each record states one decision that shapes the system, what it was chosen over, and when to revisit it. The specs in `specs/` are binding and hold the detail; a record summarizes a decision they already make and points at the spec section, the code and the tests that hold it. [DESIGN.md §Trade-offs](../../DESIGN.md#trade-offs) keeps the one-line view.
 
-Write a new record when a change alters a spec decision or a DESIGN.md trade-off: the next number, `NNNN-kebab-title.md`, with Status, Date, Context, Decision, Alternatives considered, Consequences (including when to revisit) and References. A replaced decision keeps its file with `Status: Superseded by NNNN`.
+Write a new record when a change alters a spec decision or a DESIGN.md trade-off: the next number, `NNNN-kebab-title.md`, with Status, Date, Context, Decision, Alternatives considered, Consequences (including when to revisit) and References. A replaced decision keeps its file with `Status: Superseded by NNNN` and its row here is updated. Date is when the decision entered the specs; the body describes the system as built.
 
 | #                                                          | Decision                                                                          | Status   | Date       |
 | ---------------------------------------------------------- | --------------------------------------------------------------------------------- | -------- | ---------- |

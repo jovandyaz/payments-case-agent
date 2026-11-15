@@ -11,7 +11,7 @@ The agent reads account data through four MCP tools. If a tool took `customer_id
 The harness mints a case token per run (G4): a JWT signed HS256 with `CASE_TOKEN_KEY` (separate from the webhook secret and the executor key), with `sub: customer_id`, `case_id`, `run_id`, `jti`, `scope: "case:read"`, `aud` set to the MCP server's canonical URL, and `exp = iat + RUN_TIMEOUT_MS + 60 s`, never more than 10 minutes.
 
 - The MCP server verifies algorithm, issuer and audience, resolves the customer from the token and never from tool arguments; no tool accepts `customer_id`.
-- A transaction id owned by someone else returns `NOT_FOUND`, the same as a missing id, and records a `cross_customer_lookup` security event.
+- A transaction id owned by someone else returns `NOT_FOUND`, the same as a missing id, and records a `cross_customer_lookup` security event; if that insert fails, the answer is still `NOT_FOUND` and `security_event_unrecorded` pages security.
 - The token is never passed through: the MCP server calls core-mock with its own read-only key. At most 12 tool calls per `jti`.
 
 ## Alternatives considered

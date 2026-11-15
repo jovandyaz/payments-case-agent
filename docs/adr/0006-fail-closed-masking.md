@@ -15,14 +15,14 @@ One pure function `maskPii(text)` in `packages/contracts`, applied at intake, on
 
 ## Alternatives considered
 
-- **A Luhn-gated DLP (Presidio and similar).** Misses Luhn-failing and spelled-out numbers, and CLABEs.
+- **A Luhn-gated DLP (Presidio and similar).** Misses Luhn-failing numbers and CLABEs.
 - **A per-case vault of full values.** The model never needs a full value, so there is nothing to vault for it.
 
 ## Consequences
 
-- No full personal number reaches the model, a log or a trace, whatever its check digit.
-- Legitimate figures can be masked too: the masker exempts at most 32 date digits per message, all or none, and the date cap residual stays a deliberate trade-off (EVALS.md).
-- Revisit only with a test that fails first and explicit approval: G6 is an invariant.
+- No run of 8 or more digits reaches the model, a log or a trace, whatever its check digit; a number its owner deliberately enciphers is the residual the spec accepts (02 §Residual risk).
+- Legitimate figures can trip it: a reply whose dates pass the cap of 32 date digits (all or none) fails `PII_IN_REPLY` and falls back; the date cap residual stays a deliberate trade-off (EVALS.md).
+- Revisit when a personal number shorter than 10 digits enters the domain, or when legitimate figures falling back becomes a cost EVALS.md reports; any change needs a test that fails first and explicit approval, since G6 is an invariant.
 
 ## References
 
