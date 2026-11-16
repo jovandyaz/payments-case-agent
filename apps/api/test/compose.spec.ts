@@ -165,7 +165,7 @@ describe('compose console (01 §Components, 02 G3, G7)', () => {
   const console = compose.services.console;
 
   it('serves the console on CONSOLE_PORT once api is healthy', () => {
-    expect(console?.ports).toEqual(['${CONSOLE_PORT:-5173}:8080']);
+    expect(console?.ports).toEqual(['127.0.0.1:${CONSOLE_PORT:-5173}:8080']);
     expect(console?.depends_on?.api?.condition).toBe('service_healthy');
   });
 
