@@ -94,7 +94,7 @@ Latest run (eval run 1): both variants block 30/30 attack attempts with 0 unauth
 
 ## Cut and ported
 
-Cut ([00](specs/00-scope.md#explicitly-cut-and-why)): SSO, real ticketing, messaging and money, streaming UI, multi-agent and memory, dual-LLM, model failover, vector retrieval, an external queue, polished UI; each is outside the MVP or adds attack surface without a guarantee. No OpenTelemetry exporter: Postgres traces suffice; the masked seam stays tested and is wired once a tracing provider is chosen.
+Cut ([00](specs/00-scope.md#explicitly-cut-and-why)): SSO, real ticketing, messaging and money, streaming UI, multi-agent and memory, dual-LLM, model failover, vector retrieval, an external queue, polished UI; each is outside the MVP or adds attack surface without a guarantee. Postgres traces are the record; the optional Langfuse export over OTLP is off unless both keys are set, records no prompt or output content, and exports only through `maskingSpanProcessor`.
 
 Ported from Knowtis with tests, 12 `port` commits: stop hook, MCP annotations, Drizzle module, JSON logger, link scanner, unique-violation check, token cost, model fixtures, injection guard, HTTP filter, eval runtime, judgment agreement. Rewritten: the MCP wrapper. Not taken: the step loop, Redis queues, RRF, OAuth, the LLM injection classifier.
 
