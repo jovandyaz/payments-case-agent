@@ -70,6 +70,7 @@ const ID_ALPHABET = [
   ...'0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz',
 ];
 const REQUEST_ID: IdShape = { prefix: 'req_011C', chars: 20 };
+const MESSAGE_ID: IdShape = { prefix: 'msg_01', chars: 22 };
 const TOOL_CALL_ID: IdShape = { prefix: 'toolu_01', chars: 22 };
 const POLICY_RESULTS = 3;
 const FINISH = { toolCalls: 'tool-calls', stop: 'stop' } as const;
@@ -352,6 +353,8 @@ function scriptedModel(
           outputTokens: { total: output, text: output, reasoning: 0 },
         },
         response: {
+          // Without an id the AI SDK stamps its own on the span.
+          id: idOf(MESSAGE_ID, pacing.random),
           modelId,
           timestamp: new Date(),
           headers: { 'request-id': idOf(REQUEST_ID, pacing.random) },

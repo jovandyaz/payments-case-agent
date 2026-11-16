@@ -10,6 +10,7 @@ import {
   runCaseDepsOf,
 } from '../agent/core/deps.js';
 import { usageCostUsd } from '../agent/core/cost.js';
+import { langfuseSettings, langfuseTelemetry } from '../agent/core/langfuse.js';
 import { pricingOf } from '../agent/core/prices.js';
 import { failLeftoverEvalCases } from '../agent/core/queue.js';
 import { redactCase } from '../agent/core/redact.js';
@@ -51,12 +52,17 @@ export interface EvalHarness {
  */
 export async function pricedRedaction(
   textMasked: string,
-  redactor: { model: LanguageModel; modelId: string } | null,
+  redactor: {
+    model: LanguageModel;
+    modelId: string;
+    telemetry?: RunCaseDeps['telemetry'];
+  } | null,
 ): Promise<{ spans: readonly string[]; degraded: boolean; costUsd: number }> {
   if (redactor === null) return { spans: [], degraded: true, costUsd: 0 };
   const redaction = await redactCase(textMasked, {
     model: redactor.model,
     timeoutMs: REDACTOR_TIMEOUT_MS,
+    telemetry: redactor.telemetry,
   });
   const usage = redaction.step?.usage;
   return {
@@ -89,6 +95,13 @@ export function evalHarness(input: {
   });
   const db = drizzle({ client: sql, schema });
   const catalog = loadCatalog(POLICIES_DIR);
+  const settings = langfuseSettings(shared);
+  const langfuse =
+    settings === null
+      ? null
+      : langfuseTelemetry(settings, (reason) =>
+          input.log({ event: 'langfuse_flush_failed', reason }),
+        );
   const depsFor: EvalHarness['depsFor'] = (variant) =>
     runCaseDepsOf({
       config: agentConfigOf(
@@ -101,6 +114,7 @@ export function evalHarness(input: {
       db,
       catalog,
       log: input.log,
+      telemetry: langfuse?.telemetry,
     });
   return {
     depsFor,
@@ -108,9 +122,19 @@ export function evalHarness(input: {
       const deps = depsFor(REDACTOR_VARIANT);
       const modelId = deps.config.redactorModelId;
       const model = deps.models?.(modelId);
-      return pricedRedaction(textMasked, model ? { model, modelId } : null);
+      return pricedRedaction(
+        textMasked,
+        model ? { model, modelId, telemetry: deps.telemetry } : null,
+      );
     },
     failLeftovers: (now) => failLeftoverEvalCases(db, now),
-    close: () => sql.end(),
+    // Spans first, while nothing else is pending; then the pool.
+    close: async () => {
+      try {
+        await langfuse?.shutdown();
+      } finally {
+        await sql.end();
+      }
+    },
   };
 }

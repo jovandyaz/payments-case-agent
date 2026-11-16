@@ -76,6 +76,31 @@ describe('loadApiConfig', () => {
     ).toHaveLength(16);
   });
 
+  it('leaves Langfuse off without keys and defaults its base URL', () => {
+    expect(loadApiConfig(ENV)).toMatchObject({
+      LANGFUSE_PUBLIC_KEY: '',
+      LANGFUSE_SECRET_KEY: '',
+      LANGFUSE_BASE_URL: 'https://cloud.langfuse.com',
+    });
+  });
+
+  it('refuses one Langfuse key without the other, naming only the missing one', () => {
+    const refusalOf = (env: NodeJS.ProcessEnv): string => {
+      try {
+        loadApiConfig(env);
+      } catch (error) {
+        return String(error);
+      }
+      throw new Error('config accepted one Langfuse key');
+    };
+    const noSecret = refusalOf({ ...ENV, LANGFUSE_PUBLIC_KEY: 'pk-lf-test' });
+    expect(noSecret).toContain('LANGFUSE_SECRET_KEY');
+    expect(noSecret).not.toContain('LANGFUSE_PUBLIC_KEY');
+    const noPublic = refusalOf({ ...ENV, LANGFUSE_SECRET_KEY: 'sk-lf-test' });
+    expect(noPublic).toContain('LANGFUSE_PUBLIC_KEY');
+    expect(noPublic).not.toContain('LANGFUSE_SECRET_KEY');
+  });
+
   it('reads a key of only spaces as no key', () => {
     expect(
       loadApiConfig({ ...ENV, ANTHROPIC_API_KEY: '  ' }).ANTHROPIC_API_KEY,

@@ -112,7 +112,7 @@ export interface RunCaseDeps {
   /** Receives events whose free text `runCase` has already masked (02 G6). */
   log: (event: Record<string, unknown>) => void;
   /** Traces the redactor and agent calls; its span processor must be wrapped in `maskingSpanProcessor`. */
-  telemetry?: Telemetry;
+  telemetry?: Telemetry | undefined;
 }
 
 /**

@@ -30,6 +30,9 @@ const AGENT_CONFIG_KEYS = [
   'MCP_URL',
   'MCP_AUDIENCE',
   'CASE_TOKEN_KEY',
+  'LANGFUSE_PUBLIC_KEY',
+  'LANGFUSE_SECRET_KEY',
+  'LANGFUSE_BASE_URL',
 ] as const satisfies readonly (keyof ApiConfig)[];
 
 /** The part of the `api` config the agent may hold. */
@@ -88,6 +91,8 @@ export function runCaseDepsOf(input: {
   db: Database;
   catalog: readonly PolicyCatalogEntry[];
   log: RunCaseDeps['log'];
+  /** Where the agent's and the redactor's spans go; none means no export. */
+  telemetry?: RunCaseDeps['telemetry'];
 }): RunCaseDeps {
   const config = runCaseConfigOf(input.config);
   return {
@@ -101,5 +106,6 @@ export function runCaseDepsOf(input: {
     clock: () => Date.now(),
     random: () => Math.random(),
     log: input.log,
+    telemetry: input.telemetry,
   };
 }

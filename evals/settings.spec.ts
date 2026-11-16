@@ -44,6 +44,8 @@ describe('runnerEnv (the key from the .env compose reads, nothing else)', () => 
     'CORE_EXECUTOR_KEY=dev-core-executor-key',
     'MCP_URL=http://mcp:3020/mcp',
     'API_DATABASE_URL=postgres://payments_api@postgres/payments',
+    'LANGFUSE_PUBLIC_KEY=pk-lf-test',
+    'LANGFUSE_SECRET_KEY=sk-lf-test',
   ].join('\n');
 
   it('takes the key, the models and the run ceilings from .env, never the executor key or container urls', () => {
@@ -51,6 +53,8 @@ describe('runnerEnv (the key from the .env compose reads, nothing else)', () => 
       ANTHROPIC_API_KEY: 'sk-test',
       AGENT_MODEL_B: 'claude-haiku-5-5',
       RUN_COST_CEILING_USD: '0.4',
+      LANGFUSE_PUBLIC_KEY: 'pk-lf-test',
+      LANGFUSE_SECRET_KEY: 'sk-lf-test',
     });
   });
 

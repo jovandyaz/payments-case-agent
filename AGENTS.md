@@ -20,6 +20,7 @@ An agent that investigates a customer case with read-only tools and policies, pr
 | `docs/agent-setup/`               | Snapshot of the global agent setup used to build this                                                 | —         |
 | `.claude/skills/`                 | `add-eval-case` and `add-policy-doc`: the two project skills for small changes                        | —         |
 | `ops/`                            | Alert and metric SQL, on-call README                                                                  | 01        |
+| `docs/adr/`                       | Architecture decision records and their index                                                         | —         |
 | `docs/roadmap.md`                 | What comes next, by priority                                                                          | —         |
 | root `*.md`, `docs/compliance.md` | Docs: README, DESIGN, EVALS (results), PLAYBOOK (teams reusing it), AI_NOTES; the compliance appendix | 03        |
 
@@ -62,7 +63,7 @@ Never weaken one of these without a test that fails first and the user's explici
 - Every behavior change follows one sequence, in this order and with no stage skipped: `developing-feature` → `reviewing-pr` plus `invariant-reviewer` (any diff on a G1–G8 path, before it is committed) → `verifying-change` with a fresh verifier → `committing-change`. The skills are listed in `docs/agent-setup/README.md` §Skills by phase.
 - A spec change is its own `docs:` commit with the reason. Ports from Knowtis use the `port` scope and come with their tests (`specs/00-scope.md`).
 - Commits: one line, Conventional Commits, English, imperative.
-- No secrets in the repo. Every variable lives in `.env.example` with a dev default; only `ANTHROPIC_API_KEY` is left empty.
+- No secrets in the repo. Every variable lives in `.env.example` with a dev default; only `ANTHROPIC_API_KEY` and the optional `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` are left empty.
 - No dead code, no `TODO` without a ticket.
 - Code, specs and docs are in English, `PLAYBOOK.md` included; Spanish is for the product's data and UI (cases, replies, policies, console). The global-setup snapshot in `docs/agent-setup/` keeps its source language.
 

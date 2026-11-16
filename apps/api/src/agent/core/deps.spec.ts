@@ -64,6 +64,9 @@ describe('agentConfigOf (02 G4)', () => {
       'AGENT_VARIANT',
       'ANTHROPIC_API_KEY',
       'CASE_TOKEN_KEY',
+      'LANGFUSE_BASE_URL',
+      'LANGFUSE_PUBLIC_KEY',
+      'LANGFUSE_SECRET_KEY',
       'MCP_AUDIENCE',
       'MCP_URL',
       'REDACTOR_MODEL',
@@ -148,6 +151,18 @@ describe('loadCatalog (02 G8: titles reach every run)', () => {
 });
 
 describe('runCaseDepsOf', () => {
+  it('traces the agent and the redactor only through the integration it is given', () => {
+    const base = {
+      config: agentConfigOf(testApiConfig()),
+      db: {} as Database,
+      catalog: [],
+      log: () => undefined,
+    };
+    const telemetry = { onStart: () => undefined };
+    expect(runCaseDepsOf(base).telemetry).toBeUndefined();
+    expect(runCaseDepsOf({ ...base, telemetry }).telemetry).toBe(telemetry);
+  });
+
   it('wires the real intake scan, MCP client and retrieval catalog', () => {
     const config = agentConfigOf(testApiConfig());
     const catalog = loadCatalog(POLICIES_DIR);

@@ -67,6 +67,7 @@ const TAIL_TOLERANCE = 0.08;
 const REPAIR_DRAW = 0;
 const REQUEST_ID = /^req_011C[0-9A-Za-z]{20}$/;
 const TOOL_CALL_ID = /^toolu_01[0-9A-Za-z]{22}$/;
+const MESSAGE_ID = /^msg_01[0-9A-Za-z]{22}$/;
 // A bare limit or cursor only pages the list, so it does not count as a filter.
 const NARROWING_FILTERS = [
   'type',
@@ -175,6 +176,7 @@ interface RunTotals {
   toolCalls: number;
   validations: number;
   requestIds: string[];
+  messageIds: string[];
   toolCallIds: string[];
 }
 
@@ -232,6 +234,9 @@ async function scriptedRun(
     validations,
     requestIds: [redacted, ...agentCalls].map(
       ({ response }) => response?.headers?.['request-id'] ?? '',
+    ),
+    messageIds: [redacted, ...agentCalls].map(
+      ({ response }) => response?.id ?? '',
     ),
     toolCallIds: agentCalls.flatMap(({ content }) =>
       toolCallsOf(content).map(({ id }) => id),
@@ -508,14 +513,18 @@ describe('canaryModelsOf (02 G3)', () => {
     },
   );
 
-  it('stamps request and tool call ids in the provider shapes, fresh on every call', async () => {
-    const { requestIds, toolCallIds } = await scriptedRun(
+  it('stamps request, message and tool call ids in the provider shapes, fresh on every call', async () => {
+    const { requestIds, messageIds, toolCallIds } = await scriptedRun(
       TEMPLATE!,
       seededRandom(3),
     );
     for (const id of requestIds) expect(id).toMatch(REQUEST_ID);
+    // The span's gen_ai.response.id: without it the AI SDK stamps its own
+    // aitxt- id, which no real Anthropic run carries (02 G3, Canary proposals).
+    for (const id of messageIds) expect(id).toMatch(MESSAGE_ID);
     for (const id of toolCallIds) expect(id).toMatch(TOOL_CALL_ID);
     expect(new Set(requestIds).size).toBe(requestIds.length);
+    expect(new Set(messageIds).size).toBe(messageIds.length);
     expect(new Set(toolCallIds).size).toBe(toolCallIds.length);
   });
 
