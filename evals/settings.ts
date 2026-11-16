@@ -25,6 +25,9 @@ const FROM_DOT_ENV = [
   'RUN_INPUT_TOKEN_CEILING',
   'JUDGE_MODEL',
   'EVAL_SPEND_CAP_USD',
+  'LANGFUSE_PUBLIC_KEY',
+  'LANGFUSE_SECRET_KEY',
+  'LANGFUSE_BASE_URL',
 ] as const;
 
 /** The runner's environment: the process environment over the allowed keys of `.env` (null when there is none). */

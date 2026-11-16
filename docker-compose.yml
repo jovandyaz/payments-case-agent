@@ -46,6 +46,9 @@ services:
       CORE_MOCK_URL: http://core-mock:3010
       CORE_READ_KEY: ${CORE_READ_KEY:-dev-core-read-key}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-}
+      LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-}
+      LANGFUSE_BASE_URL: ${LANGFUSE_BASE_URL:-https://cloud.langfuse.com}
       AGENT_MODE: ${AGENT_MODE:-on}
       AGENT_WORKER: ${AGENT_WORKER:-on}
       AGENT_POLL_MS: ${AGENT_POLL_MS:-1000}

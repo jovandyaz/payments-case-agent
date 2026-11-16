@@ -21,13 +21,13 @@ Payments Case Agent is heading to an MVP. Work ships in bolts: a cohesive, merge
 
 ## P1
 
-| #   | Item                                                   | Effort | Notes                                                                                                                                               |
-| --- | ------------------------------------------------------ | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 6   | Export the existing OTel spans to Langfuse (OTLP HTTP) | S–M    | `apps/api/src/agent/core/telemetry.ts` already has `maskingSpanProcessor`; missing are the exporter and moving the OTel packages to `dependencies`. |
-| 7   | p50 time-to-decision dashboard and a re-contact metric | S      | The only defined metrics not built yet.                                                                                                             |
-| 8   | Calibrate the judge to TNR ≥ 0.9 and make it a gate    | M      | Needs more labels and a rubric pass.                                                                                                                |
-| 9   | Broaden the red team with promptfoo's redteam plugin   | M      | Listed in DESIGN.md under "with more time".                                                                                                         |
-| 10  | Deploy to AWS                                          | L      | Today it runs on docker compose only. ECS Fargate + RDS or App Runner, minimal Terraform.                                                           |
+| #   | Item                                                   | Effort | Notes                                                                                                                                                                                                                  |
+| --- | ------------------------------------------------------ | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 6   | Export the existing OTel spans to Langfuse (OTLP HTTP) | S–M    | Done: with `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` set, the worker and the eval runner export the agent's and the redactor's spans over OTLP HTTP, every one through `maskingSpanProcessor`; off without them. |
+| 7   | p50 time-to-decision dashboard and a re-contact metric | S      | The only defined metrics not built yet.                                                                                                                                                                                |
+| 8   | Calibrate the judge to TNR ≥ 0.9 and make it a gate    | M      | Needs more labels and a rubric pass.                                                                                                                                                                                   |
+| 9   | Broaden the red team with promptfoo's redteam plugin   | M      | Listed in DESIGN.md under "with more time".                                                                                                                                                                            |
+| 10  | Deploy to AWS                                          | L      | Today it runs on docker compose only. ECS Fargate + RDS or App Runner, minimal Terraform.                                                                                                                              |
 
 ## P2
 

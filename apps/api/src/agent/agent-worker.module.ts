@@ -15,6 +15,11 @@ import { reasonOf } from '../common/errors/reason-of.js';
 import { DATABASE, type Database } from '../database/index.js';
 import { POLICIES_DIR } from '../retrieval/ingest.js';
 import { loadCatalog, runCaseDepsOf, type AgentConfig } from './core/deps.js';
+import {
+  langfuseSettings,
+  langfuseTelemetry,
+  type LangfuseTelemetry,
+} from './core/langfuse.js';
 import { claimNextCase } from './core/queue.js';
 import { runCase } from './core/run-case.js';
 import { createBreaker, runWorker } from './core/worker.js';
@@ -27,6 +32,7 @@ class AgentWorker implements OnApplicationBootstrap, BeforeApplicationShutdown {
   private readonly logger = new Logger('AgentWorker');
   private readonly stop = new AbortController();
   private running: Promise<void> | null = null;
+  private langfuse: LangfuseTelemetry | null = null;
 
   constructor(
     @Inject(DATABASE) private readonly db: Database,
@@ -36,6 +42,13 @@ class AgentWorker implements OnApplicationBootstrap, BeforeApplicationShutdown {
   onApplicationBootstrap(): void {
     const { db, config, logger } = this;
     const { signal } = this.stop;
+    const settings = langfuseSettings(config);
+    this.langfuse =
+      settings === null
+        ? null
+        : langfuseTelemetry(settings, (reason) =>
+            logger.warn({ event: 'langfuse_flush_failed', reason }),
+          );
     // Read before the first claim: a refused corpus, or models the canaries
     // are not calibrated for, keep api from booting.
     const deps = runCaseDepsOf({
@@ -43,6 +56,7 @@ class AgentWorker implements OnApplicationBootstrap, BeforeApplicationShutdown {
       db,
       catalog: loadCatalog(POLICIES_DIR),
       log: (event) => logger.log(event),
+      telemetry: this.langfuse?.telemetry,
     });
     assertCanaryCalibration(deps.config);
     this.running = runWorker({
@@ -69,6 +83,8 @@ class AgentWorker implements OnApplicationBootstrap, BeforeApplicationShutdown {
   async beforeApplicationShutdown(): Promise<void> {
     this.stop.abort();
     await this.running;
+    // After the last attempt, so its spans are flushed too.
+    await this.langfuse?.shutdown();
     this.logger.log({ event: 'agent_worker_stopped' });
   }
 }

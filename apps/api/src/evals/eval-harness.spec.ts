@@ -65,6 +65,22 @@ describe('evalHarness (03 §Runner: the dev defaults compose uses)', () => {
     expect(harness.depsFor('A').models).toBeNull();
   });
 
+  it('traces to Langfuse only with both keys set', async () => {
+    harness = evalHarness({ env: {}, envExample: ENV_EXAMPLE, log: noLog });
+    expect(harness.depsFor('A').telemetry).toBeUndefined();
+    await harness.close();
+    harness = evalHarness({
+      env: {
+        LANGFUSE_PUBLIC_KEY: 'pk-lf-test',
+        LANGFUSE_SECRET_KEY: 'sk-lf-test',
+      },
+      envExample: ENV_EXAMPLE,
+      log: noLog,
+    });
+    expect(harness.depsFor('A').telemetry).toBeDefined();
+    expect(harness.depsFor('B').telemetry).toBe(harness.depsFor('A').telemetry);
+  });
+
   it('refuses to run holding CORE_EXECUTOR_KEY, as the api does (02 G1)', () => {
     expect(() =>
       evalHarness({
