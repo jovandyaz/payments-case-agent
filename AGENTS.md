@@ -20,6 +20,7 @@ An agent that investigates a customer case with read-only tools and policies, pr
 | `docs/agent-setup/`               | Snapshot of the global agent setup used to build this                                                 | —         |
 | `.claude/skills/`                 | `add-eval-case` and `add-policy-doc`: the two project skills for small changes                        | —         |
 | `ops/`                            | Alert and metric SQL, on-call README                                                                  | 01        |
+| `docs/adr/`                       | Architecture decision records and their index                                                         | —         |
 | `docs/roadmap.md`                 | What comes next, by priority                                                                          | —         |
 | root `*.md`, `docs/compliance.md` | Docs: README, DESIGN, EVALS (results), PLAYBOOK (teams reusing it), AI_NOTES; the compliance appendix | 03        |
 
