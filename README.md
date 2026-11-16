@@ -2,17 +2,83 @@
 
 [![CI](https://github.com/jovandyaz/payments-case-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/jovandyaz/payments-case-agent/actions/workflows/ci.yml)
 
-An agent that investigates a customer case with read-only tools and policies, proposes a resolution, and leaves every consequential action to a human in ops. It is a personal project heading to an MVP ([roadmap](docs/roadmap.md)): a signed ticket webhook, one MCP server with four read-only tools bound to the case, cited policy retrieval, a validator after every model output, an ops console where an authenticated operator decides, and an executor in its own container. The specs in `specs/` are the design; `AGENTS.md` maps the code.
+An agent that investigates a customer's payments complaint with read-only tools and cited policies, proposes a resolution, and leaves every consequential action to a human in ops. A personal project heading to an MVP ([roadmap](docs/roadmap.md)); the bank, its customers and its policies are synthetic.
 
-## Start here
+## The problem
 
-1. [Quickstart](#quickstart): `pnpm install && pnpm start` opens the console with three sample cases (with `docker compose up --build` and no Node, open them with **Nuevo caso**); [data/CUSTOMERS.md](data/CUSTOMERS.md) lists every customer's movements for a case of your own.
-2. [DESIGN.md](DESIGN.md): the harness, the defense model and its residual risk, what was cut, what breaks at 10x.
-3. [EVALS.md](EVALS.md): the latest run, where the agent fails and why, and the run history, a regression the gate caught included.
-4. The code behind the guarantees: `apps/api/src/agent/core/agent.ts` (the loop and its budgets), `apps/api/src/agent/core/validate/` (the checks after every model output), `apps/api/src/approvals/` and `apps/api/src/executor/` (the human gate and the only writer), `apps/mcp/src/tools.ts` (tools bound to the case).
-5. [PLAYBOOK.md](PLAYBOOK.md) and [AI_NOTES.md](AI_NOTES.md).
+A payments complaint ("I sent a SPEI that never arrived", "a card charge I don't recognize") takes an ops analyst several lookups across movements, transfers and policy before they can answer. Part of that is mechanical and an agent can do it. But the complaint is untrusted text that can carry instructions, the data is full of account numbers that must not leak, and a wrong dispute or fraud escalation sets real work in motion on a customer's account. So the agent here only investigates and proposes; an authenticated operator decides, and a separate executor is the only thing that writes to the core.
 
-Further depth, not needed for a first pass: `specs/`, [docs/compliance.md](docs/compliance.md), [ops/README.md](ops/README.md) and the [canaries](#canaries).
+## How it works
+
+```mermaid
+flowchart LR
+  T[Ticket system] -- signed webhook --> W
+  subgraph API["api: payments_api role, no executor key"]
+    W["Intake: mask, folio, 202"] --> Q[("case row = job")]
+    Q --> K["Worker: redactor, injection flag"]
+    K --> A["ToolLoopAgent ≤ 8 steps"]
+    A -- search_policies --> R[(policy chunks)]
+    A --> V{Validator}
+    V -- one repair --> A
+    V -- "valid, or fallback" --> P[Persist]
+    D[Decision API]
+  end
+  A -- case token --> M
+  subgraph MCP["mcp: insert-only role"]
+    M[4 read-only tools]
+  end
+  P --> O[Console] -- operator token --> D
+  D -- "approved row = outbox" --> E
+  subgraph EX["executor: payments_executor role"]
+    E[Re-validate, write once]
+  end
+  M -- read key --> C[(core-mock)]
+  E -- "executor key + Idempotency-Key" --> C
+```
+
+- **Nothing executes without an operator.** The agent cannot reach the executor or its key; the approved row is the outbox, and the effect happens once under an idempotency key. Canary proposals measure whether operators actually review.
+- **The model cannot invent an action.** Actions are a closed set with no amount, account or free-text field, and each one must be supported by facts from the tools.
+- **The tools are bound to the case.** The four MCP tools resolve the customer from the case token, never from an id the model passes.
+- **Every model output is checked, and personal data is masked.** The validator checks citations, numbers, promises, links, PII and requests for auth factors after each output; full CLABE, card numbers and other identifiers never reach logs, traces or the model.
+
+The guarantees and their tests: [specs/02-security.md](specs/02-security.md) (G1–G8). The trade-offs: [DESIGN.md](DESIGN.md).
+
+## Results
+
+From the run of 2026-10-23 ([EVALS.md](EVALS.md)), variant A (`claude-sonnet-5-5`), proportions with Wilson 95% intervals:
+
+| Metric                                                 | Result                                       |
+| ------------------------------------------------------ | -------------------------------------------- |
+| Classification                                         | 22/24 (0.74–0.98)                            |
+| Action exact                                           | 22/24 (0.74–0.98)                            |
+| pass^3, high-stakes cases                              | 13/14 (0.69–0.99)                            |
+| System-level block rate (injection)                    | 30/30 (0.89–1.00), 0 unauthorized executions |
+| Cost per attempt p50 / p95                             | $0.0468 / $0.0811                            |
+| Full eval run (104 agent runs, judge, redactor recall) | USD 5.18                                     |
+
+Variant B (`claude-haiku-5-5`) was within one case of A on classification and action at about 1/16 of the cost per attempt, but lost two money-path cases at pass^3 (11/14 vs 13/14), so A runs; the rule was fixed before any eval run ([ADR 0007](docs/adr/0007-variant-decision-rule-before-the-first-run.md)). The LLM judge is informational only: its TNR of 0.62 misses the 0.9 bar.
+
+## What is here
+
+| Path                      | What lives there                                                                                                                             |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/api`                | NestJS: signed webhook, queue worker, the agent harness, retrieval, decisions; the executor's code, which runs in its own container and role |
+| `apps/api/src/agent/core` | The harness in plain TypeScript: the loop and its budgets, the validator, masking of traces                                                  |
+| `apps/mcp`                | MCP server with four read-only tools bound to a case token                                                                                   |
+| `apps/core-mock`          | Synthetic core banking API; its only write endpoints serve the executor                                                                      |
+| `apps/console`            | React ops console where an operator approves, rejects or overrides                                                                           |
+| `packages/contracts`      | Zod schemas and `maskPii`                                                                                                                    |
+| `data/`                   | Seeded dataset ([CUSTOMERS.md](data/CUSTOMERS.md)), scenarios, policies, webhook fixtures                                                    |
+| `evals/`                  | promptfoo runner, labeled cases, judge calibration                                                                                           |
+| `e2e/`                    | Playwright tests of the console against the compose stack                                                                                    |
+| `ops/`                    | Alert and metric SQL, on-call notes (the PII scanners are in `apps/api/src/ops/`)                                                            |
+| `specs/`                  | The binding design: scope, architecture, security, evals                                                                                     |
+
+[AGENTS.md](AGENTS.md) has the full map and the commands.
+
+## Decisions
+
+The architecture decision records explain the choices that shape the system, from the agent loop to the canaries: [docs/adr/](docs/adr/README.md).
 
 ## Quickstart
 
