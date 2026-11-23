@@ -38,7 +38,7 @@
   "devDependencies": {
     "@nestjs/testing": "11.2.7",
     "@payments-case-agent/core-mock": "workspace:*",
-    "@testcontainers/postgresql": "12.2.1",
+    "@testcontainers/postgresql": "12.2.2",
     "@types/express": "5.0.6",
     "drizzle-kit": "0.31.11"
   }
