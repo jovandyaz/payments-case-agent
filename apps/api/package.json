@@ -27,7 +27,7 @@
     "@payments-case-agent/contracts": "workspace:*",
     "ai": "7.0.128",
     "drizzle-orm": "0.45.3",
-    "jose": "6.2.12",
+    "jose": "6.2.18",
     "postgres": "3.4.9",
     "reflect-metadata": "0.2.2",
     "rxjs": "7.8.2",
